@@ -8,27 +8,27 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: { 
-          // FIX: Taller height to respect the bottom home-bar area
           height: Platform.OS === 'ios' ? 95 : 70, 
-          // FIX: Push icons up away from the bottom edge
           paddingBottom: Platform.OS === 'ios' ? 30 : 10, 
           paddingTop: 10,
           backgroundColor: '#ffffff',
-          borderTopColor: '#f1f5f9', // slate-100
+          borderTopColor: '#f1f5f9',
           borderTopWidth: 1,
-          elevation: 0, // Remove Android shadow for a clean flat look
-          shadowOpacity: 0, // Remove iOS shadow
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarActiveTintColor: '#258cf4',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarLabelStyle: {
             fontSize: 10,
             fontWeight: '600',
-            marginTop: -5, // Tweak label position
+            marginTop: -5,
         }
       }}>
+      
+      {/* 👇 FIX: Changed name from "home" to "index" */}
       <Tabs.Screen
-        name="home"
+        name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
@@ -40,6 +40,7 @@ export default function TabLayout() {
           ),
         }}
       />
+      
       <Tabs.Screen
         name="matches"
         options={{
@@ -54,7 +55,6 @@ export default function TabLayout() {
         }}
       />
       
-      {/* Middle "Listings" Button - Optional: Make it pop slightly */}
       <Tabs.Screen
         name="listings"
         options={{

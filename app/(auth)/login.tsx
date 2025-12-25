@@ -22,7 +22,7 @@ export default function LoginScreen() {
     try {
       const user = await authAPI.login(email, password); 
       login(user);
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)');
     } catch (error: any) {
       // FIX: Show the actual error from the backend/api.ts
       Alert.alert('Login Failed', error.message || 'Invalid credentials');

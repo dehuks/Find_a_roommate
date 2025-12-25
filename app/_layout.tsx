@@ -1,7 +1,6 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-// 1. Import StatusBar
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '../store/authStore';
 
@@ -18,8 +17,10 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isMounted) return;
     const inAuthGroup = segments[0] === '(auth)';
+    
     if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)/home');
+      // 👇 CHANGE: Redirect to the tabs root (which is now your Home screen)
+      router.replace('/(tabs)'); 
     } else if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
@@ -35,10 +36,15 @@ export default function RootLayout() {
 
   return (
     <>
-      {/* 2. Force Status Bar to Dark (Black Text) */}
       <StatusBar style="dark" />
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="(tabs)" 
+          options={{ 
+            headerShown: false,
+            title: '  ' 
+          }} 
+        />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack>
     </>

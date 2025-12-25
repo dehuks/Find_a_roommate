@@ -1,80 +1,120 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { dataAPI } from '../../services/api';
 
 export default function MatchesScreen() {
+  const router = useRouter();
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch Matches from Backend
+  const fetchMatches = async () => {
+    try {
+      const data = await dataAPI.getMatches();
+      setMatches(data);
+    } catch (error) {
+      console.error("Failed to load matches", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    dataAPI.getMatches().then((data) => {
-      setMatches(data);
-      setLoading(false);
-    });
+    fetchMatches();
   }, []);
 
-  if (loading) return <View className="flex-1 justify-center items-center bg-white"><ActivityIndicator color="#258cf4" /></View>;
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchMatches();
+  }, []);
+
+  // Helper: Color code the match score
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "bg-green-100 text-green-700";
+    if (score >= 50) return "bg-yellow-100 text-yellow-700";
+    return "bg-red-100 text-red-700";
+  };
+
+  const renderMatchItem = ({ item }: { item: any }) => (
+    <TouchableOpacity 
+      className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-slate-100 flex-row"
+      onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user.user_id } })}
+    >
+      {/* 1. Avatar Image */}
+      <Image 
+        source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400' }} 
+        className="w-20 h-20 rounded-2xl bg-slate-200"
+      />
+
+      {/* 2. Content Column */}
+      <View className="flex-1 ml-4 justify-between">
+        <View className="flex-row justify-between items-start">
+          <View>
+            <Text className="text-lg font-bold text-slate-900">{item.user.full_name}</Text>
+            <Text className="text-slate-500 text-xs">{item.user.gender || 'N/A'} • {item.user.preferences?.city || 'Nairobi'}</Text>
+          </View>
+          
+          {/* 3. Compatibility Score Badge */}
+          <View className={`px-2 py-1 rounded-lg ${getScoreColor(item.compatibility_score).split(' ')[0]}`}>
+            <Text className={`font-bold text-xs ${getScoreColor(item.compatibility_score).split(' ')[1]}`}>
+              {Math.round(item.compatibility_score)}% Match
+            </Text>
+          </View>
+        </View>
+
+        {/* 4. Quick Stats / Tags */}
+        <View className="flex-row mt-2 flex-wrap gap-2">
+            <View className="flex-row items-center">
+                <Ionicons name="cash-outline" size={14} color="#64748b" />
+                <Text className="text-slate-500 text-xs ml-1">
+                    {item.user.preferences?.budget_max ? `Max ${item.user.preferences.budget_max}` : 'No Budget'}
+                </Text>
+            </View>
+            <View className="flex-row items-center ml-3">
+                <Ionicons name="bed-outline" size={14} color="#64748b" />
+                <Text className="text-slate-500 text-xs ml-1">
+                    {item.user.preferences?.cleanliness_level || 'Unknown'} Clean
+                </Text>
+            </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      {/* Header */}
-      <View className="px-6 py-4 bg-white border-b border-slate-100">
+      <View className="px-6 pt-2 pb-4">
         <Text className="text-2xl font-bold text-slate-900">Your Matches</Text>
-        <Text className="text-slate-500">People who fit your vibe.</Text>
+        <Text className="text-slate-500">Based on your preferences</Text>
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
-        {matches.map((match) => (
-          <View key={match.match_id} className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-slate-100">
-            {/* Top Row: Image & Score */}
-            <View className="flex-row gap-4">
-              <Image source={{ uri: match.user.image }} className="w-20 h-20 rounded-2xl bg-slate-200" />
-              
-              <View className="flex-1 justify-center">
-                <View className="flex-row justify-between items-start">
-                  <View>
-                    <Text className="text-lg font-bold text-slate-900">{match.user.full_name}, {match.user.age}</Text>
-                    <Text className="text-slate-500 text-sm">{match.user.occupation}</Text>
-                  </View>
-                  {/* Compatibility Badge */}
-                  <View className="bg-green-100 px-2 py-1 rounded-lg flex-row items-center">
-                    <Ionicons name="sparkles" size={12} color="#16a34a" />
-                    <Text className="text-green-700 font-bold text-xs ml-1">{match.compatibility_score}%</Text>
-                  </View>
-                </View>
-
-                <View className="flex-row items-center mt-2">
-                   <Text className="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-md text-xs">
-                      Budget: KES {match.budget}
-                   </Text>
-                </View>
-              </View>
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#2563eb" />
+        </View>
+      ) : (
+        <FlatList
+          data={matches}
+          keyExtractor={(item) => item.match_id}
+          renderItem={renderMatchItem}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={
+            <View className="items-center justify-center mt-20">
+              <Ionicons name="people-outline" size={60} color="#cbd5e1" />
+              <Text className="text-slate-400 mt-4 text-center">No matches found yet.</Text>
+              <Text className="text-slate-400 text-xs text-center px-10">
+                Try updating your preferences or location to see more people.
+              </Text>
             </View>
-
-            {/* Tags Row */}
-            <View className="flex-row flex-wrap gap-2 mt-4">
-              {match.tags.map((tag: string, index: number) => (
-                <View key={index} className="bg-slate-100 px-3 py-1.5 rounded-full">
-                  <Text className="text-slate-600 text-xs font-medium">{tag}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Action Buttons */}
-            <View className="flex-row gap-3 mt-4">
-              <TouchableOpacity className="flex-1 bg-blue-600 py-3 rounded-xl flex-row justify-center items-center shadow-md shadow-blue-200">
-                <Ionicons name="chatbubble-ellipses" size={18} color="white" />
-                <Text className="text-white font-bold ml-2">Connect</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="w-12 items-center justify-center border border-slate-200 rounded-xl">
-                 <Ionicons name="close" size={24} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }

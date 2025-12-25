@@ -1,64 +1,119 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { dataAPI } from '../../services/api';
+import { useRouter } from 'expo-router';
+import { chatAPI } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
-export default function ChatScreen() {
-  const [chats, setChats] = useState<any[]>([]);
+export default function MessagesScreen() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    dataAPI.getConversations().then((data) => {
-      setChats(data);
+  const fetchConversations = async () => {
+    try {
+      const data = await chatAPI.getConversations();
+      setConversations(data);
+    } catch (error) {
+      console.error("Failed to load chats", error);
+    } finally {
       setLoading(false);
-    });
+      setRefreshing(false);
+    }
+  };
+
+  // Initial Load
+  useEffect(() => {
+    fetchConversations();
   }, []);
+
+  // Reload when screen comes into focus (so you see new messages after going back)
+  useEffect(() => {
+    const interval = setInterval(fetchConversations, 5000); // Optional: Auto-refresh inbox every 5s
+    return () => clearInterval(interval);
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchConversations();
+  }, []);
+
+  // Helper to format time (e.g., "10:30 AM")
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
+    // Safety check: Ensure other participant exists
+    if (!item.other_participant) return null;
+
+    return (
+      <TouchableOpacity 
+        className="flex-row items-center p-4 bg-white border-b border-slate-100"
+        onPress={() => router.push({ 
+            pathname: '/chat/[id]', 
+            params: { 
+                id: item.conversation_id, 
+                name: item.other_participant.full_name // Pass name for header
+            } 
+        })}
+      >
+        {/* 1. Avatar */}
+        <Image 
+          source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }} 
+          className="w-14 h-14 rounded-full bg-slate-200"
+        />
+
+        {/* 2. Message Preview */}
+        <View className="flex-1 ml-4">
+          <View className="flex-row justify-between mb-1">
+            <Text className="font-bold text-slate-900 text-base">
+                {item.other_participant.full_name}
+            </Text>
+            {item.last_message && (
+                <Text className={`text-xs ${!item.last_message.is_read ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
+                    {formatTime(item.last_message.sent_at)}
+                </Text>
+            )}
+          </View>
+          
+          <Text 
+            numberOfLines={1} 
+            className={`text-sm ${!item.last_message?.is_read ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}
+          >
+            {item.last_message ? item.last_message.text : 'Start a conversation'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <View className="px-6 py-4 border-b border-slate-50 flex-row justify-between items-center">
+      <View className="px-5 py-4 border-b border-slate-100">
         <Text className="text-2xl font-bold text-slate-900">Messages</Text>
-        <TouchableOpacity>
-           <Ionicons name="create-outline" size={24} color="#258cf4" />
-        </TouchableOpacity>
       </View>
 
       {loading ? (
-        <ActivityIndicator className="mt-10" color="#258cf4" />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#2563eb" />
+        </View>
       ) : (
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
-          {chats.map((chat) => (
-            <TouchableOpacity 
-              key={chat.conversation_id} 
-              className="px-6 py-4 flex-row items-center active:bg-slate-50 border-b border-slate-50"
-            >
-              <Image 
-                source={{ uri: chat.other_user.image }} 
-                className="w-14 h-14 rounded-full bg-slate-200" 
-              />
-              
-              <View className="flex-1 ml-4">
-                <View className="flex-row justify-between items-baseline">
-                  <Text className="text-base font-bold text-slate-900">{chat.other_user.full_name}</Text>
-                  <Text className="text-xs text-slate-400">{chat.last_message.sent_at}</Text>
-                </View>
-                
-                <View className="flex-row justify-between items-center mt-1">
-                  <Text 
-                    numberOfLines={1} 
-                    className={`text-sm flex-1 mr-4 ${!chat.last_message.is_read ? 'text-slate-900 font-semibold' : 'text-slate-500'}`}
-                  >
-                    {chat.last_message.text}
-                  </Text>
-                  {!chat.last_message.is_read && (
-                    <View className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <FlatList
+          data={conversations}
+          keyExtractor={(item) => String(item.conversation_id)}
+          renderItem={renderItem}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={
+            <View className="flex-1 justify-center items-center mt-20 px-10">
+                <Text className="text-slate-400 text-center">No messages yet. Go to Matches to find someone to talk to!</Text>
+            </View>
+          }
+        />
       )}
     </SafeAreaView>
   );
