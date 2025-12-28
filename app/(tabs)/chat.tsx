@@ -46,8 +46,7 @@ export default function MessagesScreen() {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-
-  const renderItem = ({ item }: { item: any }) => {
+const renderItem = ({ item }: { item: any }) => {
     // Safety check: Ensure other participant exists
     if (!item.other_participant) return null;
 
@@ -58,7 +57,7 @@ export default function MessagesScreen() {
             pathname: '/chat/[id]', 
             params: { 
                 id: item.conversation_id, 
-                name: item.other_participant.full_name // Pass name for header
+                name: item.other_participant.full_name
             } 
         })}
       >
@@ -74,23 +73,28 @@ export default function MessagesScreen() {
             <Text className="font-bold text-slate-900 text-base">
                 {item.other_participant.full_name}
             </Text>
-            {item.last_message && (
+            {item.last_message?.sent_at && (
                 <Text className={`text-xs ${!item.last_message.is_read ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
                     {formatTime(item.last_message.sent_at)}
                 </Text>
             )}
           </View>
           
+          {/* Show "Start a conversation" when no messages exist */}
           <Text 
             numberOfLines={1} 
-            className={`text-sm ${!item.last_message?.is_read ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}
+            className={`text-sm ${
+              item.last_message 
+                ? (!item.last_message.is_read ? 'text-slate-800 font-semibold' : 'text-slate-500')
+                : 'text-slate-400 italic'
+            }`}
           >
-            {item.last_message ? item.last_message.text : 'Start a conversation'}
+            {item.last_message ? item.last_message.text : 'Tap to start chatting'}
           </Text>
         </View>
       </TouchableOpacity>
     );
-  };
+};
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
