@@ -15,7 +15,7 @@ export default function UserDetailScreen() {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const data = await dataAPI.getUser(id);
+        const data = await dataAPI.getProfile();
         setUser(data);
       } catch (error) {
         Alert.alert("Error", "Could not load profile");

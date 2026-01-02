@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TextInput, Image, TouchableOpacity } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
-// FIX: Import 'dataAPI' instead of 'listingAPI'
+import {useRouter} from 'expo-router';
 import { dataAPI } from '../../services/api';
 
 export default function HomeScreen() {
@@ -11,7 +11,6 @@ export default function HomeScreen() {
   const [listings, setListings] = useState<any[]>([]);
 
   useEffect(() => {
-    // FIX: Use the new dataAPI method
     dataAPI.getListings().then(setListings);
   }, []);
 
