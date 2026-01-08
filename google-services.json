@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "83002569998",
+    "project_id": "roommate-finder-a92b8",
+    "storage_bucket": "roommate-finder-a92b8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:83002569998:android:d5c8666b75256845ec935f",
+        "android_client_info": {
+          "package_name": "com.roommate.finder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5uZXTxDdE7d7Y_3wkTs0kxPdaG05IzME"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

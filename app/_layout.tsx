@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '../store/authStore';
+import* as React from 'react';
+import * as Notifications from 'expo-notifications';
+import { dataAPI } from '@/services/api';
+import {Platform} from 'react-native';
 
 export default function RootLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -25,6 +29,32 @@ export default function RootLayout() {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, segments, isMounted]);
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
+
+  async function registerForPushNotificationsAsync() {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    // If we don't have permission, ask for it
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      return;
+    }
+
+    // Get the token
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log("📲 Expo Push Token:", token);
+
+    // Send to Backend
+    await dataAPI.updatePushToken(token);
+  }
 
   if (!isMounted) {
     return (

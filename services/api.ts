@@ -52,7 +52,7 @@ export const authAPI = {
     }
   },
 
-  register: async (fullName: string, email: string, pass: string, phone: string) => {
+  register: async (fullName: string, email: string, pass: string, phone: string, role: string, gender: string) => {
     const response = await fetch(`${BASE_URL}/register/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -61,8 +61,8 @@ export const authAPI = {
         email, 
         password: pass, 
         phone_number: phone, 
-        role: 'seeker', 
-        gender: 'prefer_not_to_say'
+        role: role, 
+        gender: gender
       }),
     });
 
@@ -251,6 +251,45 @@ export const dataAPI = {
     }
     
     return await response.json();
+  },
+  getMyListings: async () => {
+    const token = useAuthStore.getState().user?.token;
+    const user_id = useAuthStore.getState().user?.user_id;
+
+    // We fetch all and filter by owner ID (Client-side filtering for MVP)
+    const allListings = await dataAPI.getListings();
+    return allListings.filter((item: any) => item.owner === user_id);
+  },
+
+  // 👇 2. Delete a Listing
+  deleteListing: async (listingId: number) => {
+    const token = useAuthStore.getState().user?.token;
+    if (!token) throw new Error("Authentication required");
+
+    const response = await fetch(`${BASE_URL}/listings/${listingId}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to delete listing");
+    }
+    return true;
+  },
+  updatePushToken: async (token: string) => {
+    const authUser = useAuthStore.getState().user;
+    if (!authUser?.token) return;
+
+    await fetch(`${BASE_URL}/users/${authUser.user_id}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authUser.token}`,
+      },
+      body: JSON.stringify({ expo_push_token: token }),
+    });
   },
 };
 
