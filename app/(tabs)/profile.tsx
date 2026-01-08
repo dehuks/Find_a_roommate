@@ -10,30 +10,55 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
+import { dataAPI } from '../../services/api'; 
 
 export default function ProfileScreen() {
   const router = useRouter();
-
-  // 👇 added fetchUser
   const { user, logout, fetchUser } = useAuthStore();
-
-  // 👇 pull-to-refresh state
+  
+  // State
   const [refreshing, setRefreshing] = useState(false);
+  const [listingCount, setListingCount] = useState(0); // 👈 Track number of listings
+
+  // 👇 FETCH DATA (Profile + Listing Count) whenever screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        if (!user) return;
+        
+        try {
+          // 1. Fetch My Listings Count
+          const myListings = await dataAPI.getMyListings();
+          setListingCount(myListings.length);
+          
+          // 2. Refresh User Profile (in case verification status changed)
+          // We don't await this if we want the UI to load fast, but good to have
+          // await fetchUser?.(); 
+        } catch (error) {
+          console.error("Error loading profile stats:", error);
+        }
+      };
+      
+      loadData();
+    }, [user])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchUser?.(); // re-fetch user profile
+      await fetchUser?.(); // Re-fetch user profile from Django
+      const myListings = await dataAPI.getMyListings(); // Re-fetch listings
+      setListingCount(myListings.length);
     } catch (error) {
       console.error('Failed to refresh profile:', error);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchUser]);
 
-  // 1. Guard Clause: If no user is logged in
+  // Guard Clause: If no user is logged in
   if (!user) {
     return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center">
@@ -73,8 +98,8 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#2563eb"       // iOS
-            colors={['#2563eb']}     // Android
+            tintColor="#2563eb"
+            colors={['#2563eb']}
           />
         }
       >
@@ -108,14 +133,20 @@ export default function ProfileScreen() {
 
           <Text className="text-slate-500">{user.email}</Text>
 
+          {/* --- Stats Row --- */}
           <View className="flex-row mt-6 gap-4">
-            <View className="items-center bg-slate-50 px-6 py-3 rounded-2xl">
-              <Text className="text-xl font-bold text-slate-900">0</Text>
+            {/* 👇 CLICKABLE LISTINGS BOX */}
+            <TouchableOpacity 
+                onPress={() => router.push('/profile/listings')}
+                className="items-center bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100 active:bg-slate-100"
+            >
+              <Text className="text-xl font-bold text-slate-900">{listingCount}</Text>
               <Text className="text-xs text-slate-500 uppercase tracking-wide">
                 Listings
               </Text>
-            </View>
-            <View className="items-center bg-slate-50 px-6 py-3 rounded-2xl">
+            </TouchableOpacity>
+
+            <View className="items-center bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100">
               <Text className="text-xl font-bold text-slate-900">0</Text>
               <Text className="text-xs text-slate-500 uppercase tracking-wide">
                 Matches

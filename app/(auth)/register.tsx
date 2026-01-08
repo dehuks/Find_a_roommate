@@ -11,6 +11,11 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  
+  // 👇 New State for Role & Gender
+  const [role, setRole] = useState('seeker'); // Default to Seeker
+  const [gender, setGender] = useState('prefer_not_to_say'); 
+
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
@@ -18,13 +23,18 @@ export default function RegisterScreen() {
       return Alert.alert('Missing Info', 'Please fill in all fields.');
     }
 
+    if (gender === 'prefer_not_to_say') {
+        Alert.alert("Gender Required", "Please select a gender to help with roommate matching.");
+        return;
+    }
+
     setLoading(true);
     try {
-      // Call the API we defined earlier
-      await authAPI.register(fullName, email, password, phone);
+      // 👇 Pass the new fields to the API
+      await authAPI.register(fullName, email, password, phone, role, gender);
       
       Alert.alert('Success', 'Account created! Please log in.', [
-        { text: 'OK', onPress: () => router.back() } // Go back to Login
+        { text: 'OK', onPress: () => router.back() }
       ]);
     } catch (error: any) {
       console.error(error);
@@ -34,24 +44,36 @@ export default function RegisterScreen() {
     }
   };
 
+  // Helper Component for Selection Chips
+  const SelectionChip = ({ label, value, selectedValue, onSelect }: any) => (
+    <TouchableOpacity 
+      onPress={() => onSelect(value)}
+      className={`px-6 py-3 rounded-full border mr-2 mb-2 ${
+        selectedValue === value 
+          ? 'bg-blue-600 border-blue-600' 
+          : 'bg-white border-slate-200'
+      }`}
+    >
+      <Text className={`font-semibold ${
+        selectedValue === value ? 'text-white' : 'text-slate-600'
+      }`}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {/* FIX: Moved layout properties to contentContainerStyle */}
       <ScrollView 
-        contentContainerStyle={{ 
-          paddingBottom: 50, 
-          flexGrow: 1, 
-          justifyContent: 'center' 
-        }} 
-        className="px-8"
+        contentContainerStyle={{ paddingBottom: 50, flexGrow: 1 }} 
+        className="px-8 pt-4"
         keyboardShouldPersistTaps="handled"
       >
-        
-        <View className="mb-8">
+        <View className="mb-6">
           <Text className="text-blue-600 font-extrabold text-xl mb-2 tracking-wide uppercase">Join Us</Text>
           <Text className="text-4xl font-bold text-slate-900 mb-2">Create Account</Text>
           <Text className="text-slate-500 text-base leading-6">
-            Join the community and find your ideal roommate today.
+            Tell us about yourself to find the perfect match.
           </Text>
         </View>
 
@@ -87,6 +109,24 @@ export default function RegisterScreen() {
               value={phone}
               onChangeText={setPhone}
             />
+          </View>
+
+          {/* 👇 NEW: Role Selection */}
+          <View>
+            <Text className="text-slate-700 font-semibold mb-2 ml-1">I am a...</Text>
+            <View className="flex-row">
+                <SelectionChip label="Room Seeker" value="seeker" selectedValue={role} onSelect={setRole} />
+                <SelectionChip label="Host (Have Room)" value="host" selectedValue={role} onSelect={setRole} />
+            </View>
+          </View>
+
+          {/* 👇 NEW: Gender Selection */}
+          <View>
+            <Text className="text-slate-700 font-semibold mb-2 ml-1">Gender</Text>
+            <View className="flex-row flex-wrap">
+                <SelectionChip label="Male" value="male" selectedValue={gender} onSelect={setGender} />
+                <SelectionChip label="Female" value="female" selectedValue={gender} onSelect={setGender} />
+            </View>
           </View>
 
           <View>
