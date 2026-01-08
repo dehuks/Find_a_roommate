@@ -30,6 +30,32 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, segments, isMounted]);
 
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
+
+  async function registerForPushNotificationsAsync() {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    // If we don't have permission, ask for it
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      return;
+    }
+
+    // Get the token
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log("📲 Expo Push Token:", token);
+
+    // Send to Backend
+    await dataAPI.updatePushToken(token);
+  }
+
   if (!isMounted) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
@@ -53,29 +79,4 @@ export default function RootLayout() {
       </Stack>
     </>
   );
-  useEffect(() => {
-  registerForPushNotificationsAsync();
-}, []);
-
-async function registerForPushNotificationsAsync() {
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  // If we don't have permission, ask for it
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== 'granted') {
-    return;
-  }
-
-  // Get the token
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  console.log("📲 Expo Push Token:", token);
-
-  // Send to Backend
-  await dataAPI.updatePushToken(token);
-};
 }
