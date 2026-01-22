@@ -3,30 +3,85 @@ import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Ale
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { dataAPI, chatAPI } from '../../services/api'; // 👈 Import chatAPI
+import { dataAPI } from '../../services/api';
+import { calculateCompatibility } from '../../utils/scoring'; // 👈 Import the helper
 
 export default function UserDetailScreen() {
-  const { id, score } = useLocalSearchParams();
+  const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  
+  const [user, setUser] = useState<any>(null); // The person we are looking at
+  const [myPrefs, setMyPrefs] = useState<any>(null); // My preferences
+  const [matchScore, setMatchScore] = useState<number | null>(null);
+  
   const [loading, setLoading] = useState(true);
-  const [chatLoading, setChatLoading] = useState(false); // 👈 Loading state for starting chat
+  const [requestStatus, setRequestStatus] = useState<'none' | 'sending' | 'sent'>('none');
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const data = await dataAPI.getProfile();
-        setUser(data);
-      } catch (error) {
-        Alert.alert("Error", "Could not load profile");
-        router.back();
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) loadUser();
+    loadData();
   }, [id]);
 
+  const loadData = async () => {
+    try {
+      if (!id) return;
+
+      // 1. Fetch the Target User
+      const targetUser = await dataAPI.getUser(id as string);
+      setUser(targetUser);
+
+      // 2. Fetch MY Preferences (to calculate score)
+      const prefs = await dataAPI.getPreferences();
+      
+      if (prefs) {
+        setMyPrefs(prefs);
+        // 3. Calculate Score Instantly
+        if (targetUser.preferences) {
+            const score = calculateCompatibility(prefs, targetUser.preferences);
+            setMatchScore(score);
+        }
+      } else {
+        setMyPrefs(null); // I haven't set prefs yet
+      }
+
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Could not load profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConnect = async () => {
+    if (!myPrefs) {
+        Alert.alert(
+            "Missing Preferences", 
+            "You need to set your preferences before connecting so we can tell if you're a good match!",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Set Preferences", onPress: () => router.push('/profile/edit?tab=preferences') }
+            ]
+        );
+        return;
+    }
+    
+    // ... existing connect logic ...
+    setRequestStatus('sending');
+    try {
+        await dataAPI.requestMatch(user.user_id);
+        setRequestStatus('sent');
+        Alert.alert("Request Sent", "Wait for them to accept!");
+    } catch (error: any) {
+        if (error.message.includes("already sent")) {
+             setRequestStatus('sent');
+             Alert.alert("Notice", "Request already sent.");
+        } else {
+             setRequestStatus('none');
+             Alert.alert("Error", "Could not connect.");
+        }
+    }
+  };
+
+  // ... handleCall, handleWhatsApp ...
   const handleCall = () => {
     if (user?.phone_number) Linking.openURL(`tel:${user.phone_number}`);
   };
@@ -35,26 +90,6 @@ export default function UserDetailScreen() {
     if (user?.phone_number) {
         const phone = user.phone_number.replace('+', '');
         Linking.openURL(`https://wa.me/${phone}`);
-    }
-  };
-
-  // 👇 NEW: Handle Start Chat
-  const handleMessage = async () => {
-    if (!user) return;
-    setChatLoading(true);
-    try {
-        // 1. Call API to start/get conversation
-        const chat = await chatAPI.startChat(user.user_id);
-        
-        // 2. Redirect to the Chat Room
-        router.push({
-            pathname: '/chat/[id]',
-            params: { id: chat.conversation_id, name: user.full_name }
-        });
-    } catch (error) {
-        Alert.alert("Error", "Could not start conversation");
-    } finally {
-        setChatLoading(false);
     }
   };
 
@@ -68,62 +103,89 @@ export default function UserDetailScreen() {
 
   if (!user) return null;
 
+  // Helper for Score Color
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-600 bg-green-50 border-green-200";
+    if (score >= 50) return "text-yellow-600 bg-yellow-50 border-yellow-200";
+    return "text-red-600 bg-red-50 border-red-200";
+  };
+
   return (
     <View className="flex-1 bg-white">
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* HEADER */}
       <View className="absolute top-0 left-0 right-0 z-10 p-4 pt-12 flex-row justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-white/80 rounded-full items-center justify-center shadow-sm backdrop-blur-md">
             <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-
-        {/* 👇 NEW: Chat Button in Top Right */}
-        <TouchableOpacity onPress={handleMessage} className="w-10 h-10 bg-blue-600 rounded-full items-center justify-center shadow-sm">
-             {chatLoading ? <ActivityIndicator color="white" size="small" /> : <Ionicons name="chatbubble-ellipses" size={20} color="white" />}
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         
-        {/* Profile Image & Info */}
+        {/* Profile Image */}
         <View className="items-center mt-20 px-6">
             <Image 
                 source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=800' }} 
                 className="w-32 h-32 rounded-full border-4 border-slate-100 mb-4"
             />
             <Text className="text-3xl font-bold text-slate-900 text-center">{user.full_name}</Text>
-            <Text className="text-slate-500 text-base mb-4">{user.role || 'Roommate Seeker'} • {user.preferences?.city || 'Nairobi'}</Text>
+            <Text className="text-slate-500 text-base mb-6">{user.role || 'Seeker'} • {user.preferences?.city || 'Nairobi'}</Text>
 
-            {score && (
-                <View className="bg-green-100 px-4 py-2 rounded-full flex-row items-center mb-6">
-                    <Ionicons name="sparkles" size={16} color="#15803d" />
-                    <Text className="text-green-700 font-bold ml-2">{Math.round(Number(score))}% Match</Text>
+            {/* 👇 THE NEW SCORE CARD */}
+            {myPrefs ? (
+                <View className={`px-6 py-3 rounded-2xl border flex-row items-center mb-6 ${getScoreColor(matchScore || 0)}`}>
+                    <Ionicons name="sparkles" size={20} color="currentColor" />
+                    <View className="ml-3 items-center">
+                        <Text className="font-bold text-lg">{matchScore}% Match</Text>
+                        <Text className="text-xs opacity-80">Based on your preferences</Text>
+                    </View>
                 </View>
+            ) : (
+                // 👇 THE REMINDER IF NO PREFS
+                <TouchableOpacity 
+                    onPress={() => router.push('/profile/edit?tab=preferences')}
+                    className="bg-blue-50 border border-blue-200 px-6 py-4 rounded-2xl mb-6 flex-row items-center"
+                >
+                    <Ionicons name="alert-circle" size={24} color="#2563eb" />
+                    <View className="ml-3 flex-1">
+                        <Text className="font-bold text-blue-800">See Match Percentage</Text>
+                        <Text className="text-blue-600 text-xs mt-1">Set your preferences to see how compatible you are.</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#2563eb" />
+                </TouchableOpacity>
             )}
         </View>
 
-        {/* Action Buttons Row */}
+        {/* Buttons */}
         <View className="flex-row justify-center gap-4 px-6 mb-8">
             <TouchableOpacity onPress={handleCall} className="w-14 h-14 bg-slate-100 rounded-full items-center justify-center">
                 <Ionicons name="call" size={24} color="black" />
             </TouchableOpacity>
             
+            <TouchableOpacity 
+                onPress={handleConnect} 
+                disabled={requestStatus !== 'none'}
+                className={`flex-1 h-14 rounded-full flex-row items-center justify-center shadow-lg ${
+                    requestStatus === 'sent' ? 'bg-green-600' : 'bg-blue-600'
+                }`}
+            >
+                {requestStatus === 'sending' ? (
+                    <ActivityIndicator color="white" />
+                ) : requestStatus === 'sent' ? (
+                    <>
+                        <Ionicons name="checkmark-circle" size={24} color="white" />
+                        <Text className="text-white font-bold text-lg ml-2">Sent</Text>
+                    </>
+                ) : (
+                    <>
+                        <Ionicons name="person-add" size={24} color="white" />
+                        <Text className="text-white font-bold text-lg ml-2">Connect</Text>
+                    </>
+                )}
+            </TouchableOpacity>
+
             <TouchableOpacity onPress={handleWhatsApp} className="w-14 h-14 bg-green-500 rounded-full items-center justify-center shadow-lg shadow-green-200">
                 <Ionicons name="logo-whatsapp" size={24} color="white" />
-            </TouchableOpacity>
-            
-            {/* 👇 UPDATED: Wired up the Chat Button */}
-            <TouchableOpacity 
-                onPress={handleMessage} 
-                disabled={chatLoading}
-                className="w-14 h-14 bg-blue-600 rounded-full items-center justify-center shadow-lg shadow-blue-200"
-            >
-                {chatLoading ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Ionicons name="chatbubble-ellipses" size={24} color="white" />
-                )}
             </TouchableOpacity>
         </View>
 
@@ -133,7 +195,7 @@ export default function UserDetailScreen() {
         <View className="px-6">
             <Text className="text-lg font-bold text-slate-900 mb-4">Lifestyle & Preferences</Text>
             <View className="flex-row flex-wrap gap-3">
-                <DetailTag icon="bed" label={user.preferences?.sleep_schedule || 'Flexible Schedule'} />
+                <DetailTag icon="bed" label={user.preferences?.sleep_schedule || 'Flexible'} />
                 <DetailTag icon="water" label={`${user.preferences?.cleanliness_level || 'Medium'} Clean`} />
                 <DetailTag icon="logo-usd" label={`Budget: ${user.preferences?.budget_max || 'N/A'}`} />
                 <DetailTag 
@@ -141,24 +203,8 @@ export default function UserDetailScreen() {
                     label={user.preferences?.smoking ? "Smoker" : "Non-Smoker"} 
                     color={user.preferences?.smoking ? "text-red-600 bg-red-50" : "text-green-600 bg-green-50"}
                 />
-                <DetailTag icon="paw" label={user.preferences?.pets ? "Has Pets" : "No Pets"} />
-                <DetailTag icon="people" label={user.preferences?.guests_allowed ? "Guests OK" : "No Guests"} />
             </View>
         </View>
-
-        {/* Interests */}
-        {user.preferences?.other_interests && (
-            <View className="px-6 mt-8">
-                <Text className="text-lg font-bold text-slate-900 mb-3">Interests</Text>
-                <View className="flex-row flex-wrap gap-2">
-                    {user.preferences.other_interests.split(',').map((tag: string, i: number) => (
-                        <View key={i} className="bg-slate-100 px-4 py-2 rounded-xl">
-                            <Text className="text-slate-600 font-semibold">{tag.trim()}</Text>
-                        </View>
-                    ))}
-                </View>
-            </View>
-        )}
       </ScrollView>
     </View>
   );

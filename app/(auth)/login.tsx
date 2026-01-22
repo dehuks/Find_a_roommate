@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { authAPI } from '../../services/api';
+import { showSuccess, showError, showInfo } from '../../utils/toast'; // 👈 Import Toast helpers
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -14,18 +15,23 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    // 1. Validation Toast
     if (!email || !password) {
-      return Alert.alert('Missing Info', 'Please enter both email and password.');
+      return showInfo('Please enter both email and password to continue.');
     }
 
     setLoading(true);
     try {
       const user = await authAPI.login(email, password); 
       login(user);
+      
+      // 2. Success Toast
+      showSuccess('Welcome back!', `Signed in as ${user.full_name}`);
+      
       router.replace('/(tabs)');
     } catch (error: any) {
-      // FIX: Show the actual error from the backend/api.ts
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+      // 3. Error Toast (Handles "Invalid credentials" nicely)
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -79,7 +85,6 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        {/* FIX: Actually navigate to Register */}
         <View className="flex-row justify-center mt-6">
           <Text className="text-slate-500">Don't have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/register')}>

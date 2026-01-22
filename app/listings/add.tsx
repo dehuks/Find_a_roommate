@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { dataAPI } from '../../services/api';
+import { showSuccess, showError, showInfo } from '../../utils/toast'; // 👈 Import Toast Helpers
 
 export default function AddListingScreen() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function AddListingScreen() {
   const pickImages = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true, // Allow selecting multiple photos
+      allowsMultipleSelection: true,
       selectionLimit: 5,
       quality: 0.8,
     });
@@ -44,14 +45,13 @@ export default function AddListingScreen() {
   };
 
   const handleSubmit = async () => {
+    // 1. Validation with Toasts
     if (!formData.title || !formData.rent_amount || !formData.city) {
-      Alert.alert("Missing Fields", "Please fill in the title, rent, and city.");
-      return;
+      return showError("Missing Fields, Please fill in the title, rent, and city.");
     }
 
     if (images.length === 0) {
-      Alert.alert("No Images", "Please add at least one photo of the room.");
-      return;
+      return showError("No Images,Please add at least one photo of the room.");
     }
 
     setLoading(true);
@@ -65,7 +65,7 @@ export default function AddListingScreen() {
         postData.append(key, formData[key]);
       });
 
-      // 2. Append Images (Key must match Django Serializer: 'uploaded_images')
+      // 2. Append Images
       images.forEach((uri, index) => {
         const filename = uri.split('/').pop() || `photo_${index}.jpg`;
         const match = /\.(\w+)$/.exec(filename);
@@ -81,12 +81,15 @@ export default function AddListingScreen() {
 
       await (dataAPI as any).createListing(postData);
       
-      Alert.alert("Success", "Your room has been listed!", [
-        { text: "OK", onPress: () => router.push('/(tabs)/listings') } // Go back to listings
-      ]);
+      // 2. Success Toast
+      showSuccess("Room Listed!", "Your listing is now live.");
+      
+      // Navigate back to the listings tab
+      router.push('/(tabs)/listings');
 
     } catch (error) {
-      Alert.alert("Error", "Could not post listing. Try again.");
+      // 3. Smart Error Toast
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -174,29 +177,27 @@ export default function AddListingScreen() {
                 />
             </View>
 
-{/* Room Type Selector */}
-<InputLabel label="Room Type" />
-<View className="flex-row flex-wrap gap-2 mb-4">
-    {/* 👇 Use lowercase strings here to match Django models */}
-    {['apartment', 'bedsitter', 'hostel', 'shared', 'private'].map((type) => (
-        <TouchableOpacity
-            key={type}
-            onPress={() => setFormData({...formData, room_type: type})} 
-            className={`px-4 py-2 rounded-full border ${
-                formData.room_type === type 
-                ? 'bg-blue-600 border-blue-600' 
-                : 'bg-white border-slate-200'
-            }`}
-        >
-            {/* 👇 The 'capitalize' class makes 'apartment' look like 'Apartment' */}
-            <Text className={`capitalize font-medium ${
-                formData.room_type === type ? 'text-white' : 'text-slate-600'
-            }`}>
-                {type}
-            </Text>
-        </TouchableOpacity>
-    ))}
-</View>
+            {/* Room Type Selector */}
+            <InputLabel label="Room Type" />
+            <View className="flex-row flex-wrap gap-2 mb-4">
+                {['apartment', 'bedsitter', 'hostel', 'shared', 'private'].map((type) => (
+                    <TouchableOpacity
+                        key={type}
+                        onPress={() => setFormData({...formData, room_type: type})} 
+                        className={`px-4 py-2 rounded-full border ${
+                            formData.room_type === type 
+                            ? 'bg-blue-600 border-blue-600' 
+                            : 'bg-white border-slate-200'
+                        }`}
+                    >
+                        <Text className={`capitalize font-medium ${
+                            formData.room_type === type ? 'text-white' : 'text-slate-600'
+                        }`}>
+                            {type}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
 
             <InputLabel label="Description" />
             <TextInput 

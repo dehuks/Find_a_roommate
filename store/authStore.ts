@@ -14,6 +14,7 @@ interface User {
   token: string;
   image?: string;
   is_verified: boolean;
+  gender: string;
 }
 
 /**

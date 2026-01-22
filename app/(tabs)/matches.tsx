@@ -1,21 +1,42 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { dataAPI } from '../../services/api';
+import { dataAPI, chatAPI } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
 export default function MatchesScreen() {
   const router = useRouter();
-  const [matches, setMatches] = useState<any[]>([]);
+  const { user } = useAuthStore();
+  
+  const [matches, setMatches] = useState<any[]>([]); // Accepted matches
+  const [requests, setRequests] = useState<any[]>([]); // Pending requests
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch Matches from Backend
-  const fetchMatches = async () => {
+  // Fetch Data
+  const fetchAll = async () => {
     try {
-      const data = await dataAPI.getMatches();
-      setMatches(data);
+      const allData = await dataAPI.getMatches();
+      const currentUserId = user?.user_id;
+
+      // Filter 1: Pending Requests (Safe Check)
+      const pending = allData.filter((m: any) => 
+        m.match_status === 'pending' && 
+        m.matched_user && // 👈 CHECK IF IT EXISTS FIRST
+        m.matched_user.user_id === currentUserId
+      );
+
+      // Filter 2: Accepted Matches (Safe Check)
+      const accepted = allData.filter((m: any) => 
+        m.match_status === 'accepted' &&
+        m.user &&         // 👈 Check existence
+        m.matched_user    // 👈 Check existence
+      );
+
+      setRequests(pending);
+      setMatches(accepted);
     } catch (error) {
       console.error("Failed to load matches", error);
     } finally {
@@ -25,96 +46,149 @@ export default function MatchesScreen() {
   };
 
   useEffect(() => {
-    fetchMatches();
+    fetchAll();
   }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchMatches();
+    fetchAll();
   }, []);
 
-  // Helper: Color code the match score
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "bg-green-100 text-green-700";
-    if (score >= 50) return "bg-yellow-100 text-yellow-700";
-    return "bg-red-100 text-red-700";
+  // --- Actions ---
+
+  const handleAccept = async (matchId: number) => {
+    try {
+      await dataAPI.acceptMatch(matchId);
+      Alert.alert("Success", "You are now connected!");
+      fetchAll(); // Refresh the list
+    } catch (e) {
+      Alert.alert("Error", "Could not accept request.");
+    }
   };
 
-  const renderMatchItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-slate-100 flex-row"
-      onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user.user_id } })}
-    >
-      {/* 1. Avatar Image */}
-      <Image 
-        source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400' }} 
-        className="w-20 h-20 rounded-2xl bg-slate-200"
-      />
+  const handleReject = async (matchId: number) => {
+    try {
+      await dataAPI.rejectMatch(matchId);
+      setRequests(prev => prev.filter(m => m.match_id !== matchId));
+    } catch (e) {
+      Alert.alert("Error", "Could not remove request.");
+    }
+  };
 
-      {/* 2. Content Column */}
-      <View className="flex-1 ml-4 justify-between">
-        <View className="flex-row justify-between items-start">
-          <View>
-            <Text className="text-lg font-bold text-slate-900">{item.user.full_name}</Text>
-            <Text className="text-slate-500 text-xs">{item.user.gender || 'N/A'} • {item.user.preferences?.city || 'Nairobi'}</Text>
-          </View>
-          
-          {/* 3. Compatibility Score Badge */}
-          <View className={`px-2 py-1 rounded-lg ${getScoreColor(item.compatibility_score).split(' ')[0]}`}>
-            <Text className={`font-bold text-xs ${getScoreColor(item.compatibility_score).split(' ')[1]}`}>
-              {Math.round(item.compatibility_score)}% Match
+  const handleChat = async (targetUser: any) => {
+    try {
+        const chat = await chatAPI.startChat(targetUser.user_id);
+        router.push({
+            pathname: '/chat/[id]',
+            params: { id: chat.conversation_id, name: targetUser.full_name }
+        });
+    } catch (e) {
+        Alert.alert("Error", "Could not open chat.");
+    }
+  };
+
+  // --- Renderers ---
+
+  const renderRequestItem = (item: any) => (
+    <View key={item.match_id} className="bg-white p-4 rounded-2xl mb-4 border border-blue-100 shadow-sm">
+      <View className="flex-row items-center mb-3">
+         <Image 
+            source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400' }} 
+            className="w-12 h-12 rounded-full bg-slate-200"
+         />
+         <View className="ml-3 flex-1">
+             <Text className="font-bold text-slate-900 text-base">{item.user.full_name}</Text>
+             <Text className="text-slate-500 text-xs">Wants to connect with you</Text>
+         </View>
+         <View className="bg-blue-50 px-2 py-1 rounded">
+             <Text className="text-blue-600 font-bold text-xs">{Math.round(item.compatibility_score)}% Match</Text>
+         </View>
+      </View>
+      
+      <View className="flex-row gap-3">
+          <TouchableOpacity 
+            onPress={() => handleReject(item.match_id)}
+            className="flex-1 bg-slate-100 py-2 rounded-xl items-center"
+          >
+              <Text className="font-bold text-slate-600">Decline</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => handleAccept(item.match_id)}
+            className="flex-1 bg-blue-600 py-2 rounded-xl items-center shadow-md shadow-blue-200"
+          >
+              <Text className="font-bold text-white">Accept</Text>
+          </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderMatchItem = (item: any) => {
+    // 👇 LOGIC FIX: Determine who the "Other Person" is
+    const isMeSender = item.user.user_id === user?.user_id;
+    const otherPerson = isMeSender ? item.matched_user : item.user;
+
+    return (
+        <TouchableOpacity 
+          key={item.match_id}
+          onPress={() => handleChat(otherPerson)}
+          className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-slate-100 flex-row items-center"
+        >
+          <Image 
+            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400' }} 
+            className="w-14 h-14 rounded-full bg-slate-200"
+          />
+          <View className="flex-1 ml-4">
+            <Text className="text-lg font-bold text-slate-900">{otherPerson.full_name}</Text>
+            <Text className="text-slate-500 text-xs">
+                 {isMeSender ? "You sent request" : "They sent request"} • {otherPerson.preferences?.city || 'Nairobi'}
             </Text>
           </View>
-        </View>
-
-        {/* 4. Quick Stats / Tags */}
-        <View className="flex-row mt-2 flex-wrap gap-2">
-            <View className="flex-row items-center">
-                <Ionicons name="cash-outline" size={14} color="#64748b" />
-                <Text className="text-slate-500 text-xs ml-1">
-                    {item.user.preferences?.budget_max ? `Max ${item.user.preferences.budget_max}` : 'No Budget'}
-                </Text>
-            </View>
-            <View className="flex-row items-center ml-3">
-                <Ionicons name="bed-outline" size={14} color="#64748b" />
-                <Text className="text-slate-500 text-xs ml-1">
-                    {item.user.preferences?.cleanliness_level || 'Unknown'} Clean
-                </Text>
-            </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+          <View className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center">
+             <Ionicons name="chatbubble-ellipses" size={20} color="#2563eb" />
+          </View>
+        </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <View className="px-6 pt-2 pb-4">
-        <Text className="text-2xl font-bold text-slate-900">Your Matches</Text>
-        <Text className="text-slate-500">Based on your preferences</Text>
+      <View className="px-6 pt-2 pb-2">
+        <Text className="text-2xl font-bold text-slate-900">Connections</Text>
       </View>
 
-      {loading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#2563eb" />
-        </View>
-      ) : (
-        <FlatList
-          data={matches}
-          keyExtractor={(item) => item.match_id}
-          renderItem={renderMatchItem}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View className="items-center justify-center mt-20">
-              <Ionicons name="people-outline" size={60} color="#cbd5e1" />
-              <Text className="text-slate-400 mt-4 text-center">No matches found yet.</Text>
-              <Text className="text-slate-400 text-xs text-center px-10">
-                Try updating your preferences or location to see more people.
-              </Text>
+      <ScrollView 
+        contentContainerStyle={{ padding: 24 }} 
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* SECTION 1: REQUESTS */}
+        {requests.length > 0 && (
+            <View className="mb-8">
+                <Text className="font-bold text-slate-500 mb-3 uppercase text-xs tracking-wider">
+                    New Requests ({requests.length})
+                </Text>
+                {requests.map(renderRequestItem)}
             </View>
-          }
-        />
-      )}
+        )}
+
+        {/* SECTION 2: MATCHES */}
+        <View>
+            <Text className="font-bold text-slate-500 mb-3 uppercase text-xs tracking-wider">
+                Your Matches
+            </Text>
+            
+            {loading ? (
+                <ActivityIndicator size="large" color="#2563eb" />
+            ) : matches.length === 0 ? (
+                <View className="items-center justify-center mt-10 opacity-50">
+                    <Ionicons name="people-outline" size={48} color="black" />
+                    <Text className="mt-2 text-slate-600">No active connections yet.</Text>
+                </View>
+            ) : (
+                matches.map(renderMatchItem)
+            )}
+        </View>
+
+      </ScrollView>
     </SafeAreaView>
   );
 }

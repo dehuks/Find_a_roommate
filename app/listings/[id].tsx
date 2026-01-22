@@ -23,8 +23,9 @@ export default function ListingDetailScreen() {
 
   const fetchListing = async () => {
     try {
+      // For simplicity in MVP, we fetch all and find one. 
+      // In production, you'd add a getListingById(id) API endpoint.
       const allListings = await dataAPI.getListings();
-      // Filter the specific listing by ID
       const found = allListings.find((l: any) => String(l.listing_id) === String(id));
       
       if (!found) {
@@ -55,13 +56,14 @@ export default function ListingDetailScreen() {
       return;
     }
 
-    if (listing.owner === user.user_id) {
+    if (String(listing.owner) === String(user.user_id)) {
       Alert.alert("Oops", "You cannot message yourself!");
       return;
     }
 
     setContacting(true);
     try {
+      // Start or Open Chat
       const chat = await chatAPI.startChat(listing.owner);
       router.push({
         pathname: '/chat/[id]',
@@ -77,7 +79,7 @@ export default function ListingDetailScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out this room: ${listing.title} - KES ${listing.rent_amount}/month`,
+        message: `Check out this room: ${listing.title} - KES ${listing.rent_amount}/month on TafutaRoommie!`,
       });
     } catch (error) {
       console.error(error);
@@ -106,11 +108,10 @@ export default function ListingDetailScreen() {
     );
   }
 
-  // 👇 SAFE IMAGE HANDLING FOR NGROK
+  // Handle Images safely
   const images = listing.images && listing.images.length > 0 
     ? listing.images.map((img: any) => {
         const url = img.image_file;
-        // If URL is absolute (http...), use it. Otherwise, prepend Ngrok URL.
         return url.startsWith('http') ? url : `${SERVER_URL}${url}`;
       })
     : ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800'];
@@ -122,7 +123,7 @@ export default function ListingDetailScreen() {
     <View className="flex-1 bg-white">
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header Buttons */}
+      {/* --- HEADER --- */}
       <View className="absolute top-12 left-0 right-0 z-10 flex-row justify-between px-4">
         <TouchableOpacity 
           onPress={() => router.back()} 
@@ -140,7 +141,7 @@ export default function ListingDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Image Carousel */}
+        {/* --- IMAGE CAROUSEL --- */}
         <View className="relative">
           <ScrollView 
             horizontal 
@@ -162,7 +163,7 @@ export default function ListingDetailScreen() {
             ))}
           </ScrollView>
           
-          {/* Image Counter */}
+          {/* Counter Badge */}
           {images.length > 1 && (
             <View className="absolute bottom-4 right-4 bg-black/70 px-3 py-1.5 rounded-full">
               <Text className="text-white text-sm font-medium">
@@ -172,8 +173,8 @@ export default function ListingDetailScreen() {
           )}
         </View>
 
+        {/* --- DETAILS SECTION --- */}
         <View className="px-5 py-6">
-          {/* Title & Price */}
           <View className="mb-4">
             <View className="flex-row items-center mb-2">
               <View className="bg-blue-50 px-3 py-1 rounded-full mr-2">
@@ -225,7 +226,10 @@ export default function ListingDetailScreen() {
           {/* Host Info */}
           <View className="mb-6">
             <Text className="font-bold text-lg text-slate-900 mb-3">Hosted by</Text>
-            <View className="flex-row items-center bg-slate-50 rounded-xl p-4">
+            <TouchableOpacity 
+                onPress={() => router.push({pathname: '/user/[id]', params: {id: listing.owner}})}
+                className="flex-row items-center bg-slate-50 rounded-xl p-4"
+            >
               <View className="w-14 h-14 bg-blue-600 rounded-full items-center justify-center mr-3">
                 <Text className="text-xl font-bold text-white">{ownerInitial}</Text>
               </View>
@@ -237,7 +241,7 @@ export default function ListingDetailScreen() {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={24} color="#cbd5e1" />
-            </View>
+            </TouchableOpacity>
           </View>
 
           <View className="h-[1px] bg-slate-100 mb-6" />
@@ -250,7 +254,7 @@ export default function ListingDetailScreen() {
             </Text>
           </View>
 
-          {/* Additional Info */}
+          {/* Footer Info */}
           {listing.created_at && (
             <View className="bg-slate-50 rounded-xl p-4">
               <View className="flex-row items-center">
@@ -264,7 +268,7 @@ export default function ListingDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Action Bar */}
+      {/* --- BOTTOM ACTION BAR --- */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-2xl">
         <View className="px-6 py-4 flex-row items-center justify-between">
           <View className="flex-1 mr-4">

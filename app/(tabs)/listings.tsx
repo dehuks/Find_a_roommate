@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router'; // 👈 Added useFocusEffect for auto-refresh
 import { Ionicons } from '@expo/vector-icons';
-import { dataAPI } from '../../services/api';
+import { dataAPI, SERVER_URL } from '../../services/api'; // 👈 Import SERVER_URL
 
 export default function ListingsScreen() {
   const router = useRouter();
@@ -21,19 +21,12 @@ export default function ListingsScreen() {
     { label: 'Bedsitter', value: 'bedsitter' },
   ];
 
-  useEffect(() => {
-    fetchListings();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [searchQuery, selectedFilter, listings]);
-
   const fetchListings = async () => {
     try {
       const data = await dataAPI.getListings();
       setListings(data);
-      setFilteredListings(data);
+      // We don't overwrite filteredListings immediately here to preserve current filters
+      // Instead, we let the useEffect below handle the filtering
     } catch (error) {
       console.error('Error fetching listings:', error);
     } finally {
@@ -41,6 +34,18 @@ export default function ListingsScreen() {
       setRefreshing(false);
     }
   };
+
+  // 1. Fetch on Mount & Focus (Keeps data fresh)
+  useFocusEffect(
+    useCallback(() => {
+      fetchListings();
+    }, [])
+  );
+
+  // 2. Re-apply filters whenever listings, search, or filter changes
+  useEffect(() => {
+    applyFilters();
+  }, [searchQuery, selectedFilter, listings]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -50,14 +55,14 @@ export default function ListingsScreen() {
   const applyFilters = () => {
     let filtered = [...listings];
 
-    // Apply room type filter
+    // Filter by Type
     if (selectedFilter) {
       filtered = filtered.filter(item => 
         item.room_type?.toLowerCase() === selectedFilter.toLowerCase()
       );
     }
 
-    // Apply search filter
+    // Filter by Search (City, Area, Title)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(item =>
@@ -90,12 +95,14 @@ export default function ListingsScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Floating Add Button */}
         <TouchableOpacity
-        onPress={() => router.push('/listings/add')}
-        className="absolute bottom-6 right-6 bg-blue-600 w-14 h-14 rounded-full justify-center items-center shadow-lg shadow-blue-300 z-50"
-      >
-        <Ionicons name="add" size={32} color="white" />
-      </TouchableOpacity>
+          onPress={() => router.push('/listings/add')} // Ensure you create this file!
+          className="absolute bottom-6 right-6 bg-blue-600 w-14 h-14 rounded-full justify-center items-center shadow-lg shadow-blue-300 z-50"
+        >
+          <Ionicons name="add" size={32} color="white" />
+        </TouchableOpacity>
         
         {/* Search Bar */}
         <View className="flex-row gap-3 mb-4">
@@ -140,7 +147,7 @@ export default function ListingsScreen() {
         </ScrollView>
       </View>
 
-      {/* Listings */}
+      {/* Listings List */}
       {loading ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#2563eb" />
@@ -164,10 +171,11 @@ export default function ListingsScreen() {
           }
         >
           {filteredListings.map((item, index) => {
+            // 👇 FIX: Use SERVER_URL instead of hardcoded IP
             const imageUrl = item.images?.[0]?.image_file;
             const fullImageUrl = imageUrl?.startsWith('http') 
               ? imageUrl 
-              : `http://192.168.100.18:8000${imageUrl || ''}`;
+              : `${SERVER_URL}${imageUrl || ''}`;
 
             return (
               <TouchableOpacity 
@@ -176,20 +184,18 @@ export default function ListingsScreen() {
                 onPress={() => router.push(`/listings/${item.listing_id}`)}
                 activeOpacity={0.7}
               >
-                {/* Image */}
+                {/* Image Section */}
                 <View className="relative">
                   <Image 
                     source={{ uri: fullImageUrl }} 
                     className="w-full h-48 bg-slate-200" 
                     resizeMode="cover"
                   />
-                  {/* Room Type Badge */}
                   <View className="absolute top-3 left-3 bg-white/95 px-3 py-1.5 rounded-full">
                     <Text className="text-xs font-bold text-blue-600 uppercase tracking-wider">
                       {item.room_type}
                     </Text>
                   </View>
-                  {/* Available Badge */}
                   {item.available_from && (
                     <View className="absolute top-3 right-3 bg-green-500 px-3 py-1.5 rounded-full">
                       <Text className="text-xs font-bold text-white">Available</Text>
@@ -197,7 +203,7 @@ export default function ListingsScreen() {
                   )}
                 </View>
                 
-                {/* Content */}
+                {/* Info Section */}
                 <View className="p-4">
                   <View className="flex-row justify-between items-start mb-2">
                     <View className="flex-1 mr-3">
@@ -219,7 +225,6 @@ export default function ListingsScreen() {
                     </View>
                   </View>
 
-                  {/* Host Info */}
                   <View className="flex-row items-center mt-3 pt-3 border-t border-slate-100">
                     <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center mr-2">
                       <Text className="text-sm font-bold text-blue-600">
