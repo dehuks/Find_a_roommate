@@ -153,7 +153,6 @@ export const dataAPI = {
     }
   },
 
-  // 👇 Added getUser (was missing)
   getUser: async (id: string | string[]) => {
     const token = useAuthStore.getState().user?.token;
     const userId = Array.isArray(id) ? id[0] : id;
@@ -230,7 +229,6 @@ export const dataAPI = {
     return await response.json();
   },
 
-  // 👇 MOVED HERE from chatAPI (Correct Location)
   createListing: async (formData: FormData) => {
     const token = useAuthStore.getState().user?.token;
     if (!token) throw new Error("Authentication required");
@@ -239,7 +237,6 @@ export const dataAPI = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // No Content-Type for FormData
       },
       body: formData,
     });
@@ -252,16 +249,14 @@ export const dataAPI = {
     
     return await response.json();
   },
+
   getMyListings: async () => {
     const token = useAuthStore.getState().user?.token;
     const user_id = useAuthStore.getState().user?.user_id;
-
-    // We fetch all and filter by owner ID (Client-side filtering for MVP)
     const allListings = await dataAPI.getListings();
     return allListings.filter((item: any) => item.owner === user_id);
   },
 
-  // 👇 2. Delete a Listing
   deleteListing: async (listingId: number) => {
     const token = useAuthStore.getState().user?.token;
     if (!token) throw new Error("Authentication required");
@@ -278,6 +273,7 @@ export const dataAPI = {
     }
     return true;
   },
+
   updatePushToken: async (token: string) => {
     const authUser = useAuthStore.getState().user;
     if (!authUser?.token) return;
@@ -290,6 +286,54 @@ export const dataAPI = {
       },
       body: JSON.stringify({ expo_push_token: token }),
     });
+  },
+
+  // 👇 ADDED: Matching Functions (Fix for Connect Button)
+  requestMatch: async (targetUserId: number) => {
+    const token = useAuthStore.getState().user?.token;
+    if (!token) throw new Error("Auth Required");
+
+    const response = await fetch(`${BASE_URL}/matches/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ matched_user: targetUserId }),
+    });
+
+    if (!response.ok) {
+        // Handle "Already exists" error gracefully
+        if (response.status === 400) throw new Error("Request already sent!");
+        throw new Error("Failed to send request");
+    }
+    return await response.json();
+  },
+
+  acceptMatch: async (matchId: number) => {
+    const token = useAuthStore.getState().user?.token;
+    const response = await fetch(`${BASE_URL}/matches/${matchId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ match_status: 'accepted' }),
+    });
+
+    if (!response.ok) throw new Error("Failed to accept match");
+    return await response.json();
+  },
+
+  rejectMatch: async (matchId: number) => {
+    const token = useAuthStore.getState().user?.token;
+    const response = await fetch(`${BASE_URL}/matches/${matchId}/`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error("Failed to reject match");
+    return true;
   },
 };
 

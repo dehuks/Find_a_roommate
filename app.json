@@ -37,7 +37,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -47,7 +47,14 @@
         }
       ],
       "@react-native-firebase/app",
-      "expo-build-properties"
+      [
+  "expo-build-properties",
+  {
+    "ios": {
+      "useFrameworks": "static"
+    }
+  }
+]
     ],
     "experiments": {
       "typedRoutes": true,

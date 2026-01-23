@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';import { Ionicons } from '@expo/vector-icons';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { dataAPI, authAPI } from '../../services/api';
-
+import { showSuccess, showError, showInfo } from '../../utils/toast'; // 👈 Import Toast helpers
 
 type Tab = 'general' | 'preferences' | 'security';
 
@@ -128,16 +129,16 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
         </View>
       </View>
 
-      {/* Add after Budget Range section */}
-<View>
-  <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">City</Text>
-  <TextInput 
-    value={prefData.city || ''}
-    onChangeText={(t) => setPrefData({...prefData, city: t})}
-    placeholder="e.g. Nairobi, Mombasa"
-    className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900"
-  />
-</View>
+      {/* City */}
+      <View>
+        <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">City</Text>
+        <TextInput 
+            value={prefData.city || ''}
+            onChangeText={(t) => setPrefData({...prefData, city: t})}
+            placeholder="e.g. Nairobi, Mombasa"
+            className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900"
+        />
+      </View>
 
       {/* Lifestyle Preferences */}
       <View className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
@@ -226,31 +227,7 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
         </View>
       </View>
 
-      {/* Preferred Gender */}
-<View>
-  <Text className="text-slate-500 mb-3 ml-1 text-xs uppercase font-bold">Preferred Roommate Gender</Text>
-  <View className="flex-row gap-3">
-      {[
-        { value: 'male', label: 'Male' },
-        { value: 'female', label: 'Female' },
-        { value: 'prefer_not_to_say', label: 'Any' }
-      ].map(({ value, label }) => (
-          <TouchableOpacity 
-              key={value}
-              onPress={() => setPrefData({...prefData, preferred_gender: value})}
-              className={`flex-1 py-3 rounded-xl items-center border ${
-                  prefData.preferred_gender === value 
-                  ? 'bg-blue-600 border-blue-600' 
-                  : 'bg-white border-slate-200'
-              }`}
-          >
-              <Text className={`font-bold capitalize ${prefData.preferred_gender === value ? 'text-white' : 'text-slate-500'}`}>
-                  {label}
-              </Text>
-          </TouchableOpacity>
-      ))}
-  </View>
-</View>
+      {/* 🛑 GENDER SELECTION REMOVED FROM UI: It is auto-set in handleSave */}
 
       {/* Custom Tags Section */}
       <View>
@@ -297,9 +274,6 @@ export default function EditProfileScreen() {
   const [activeTab, setActiveTab] = useState<Tab>((tab as Tab) || 'general');
   const [loading, setLoading] = useState(false);
   
-
-  
-
   // States
   const [generalData, setGeneralData] = useState({
   full_name: '',
@@ -307,7 +281,6 @@ export default function EditProfileScreen() {
   phone_number: '',
   gender: ''
  });
-
 
   const [prefData, setPrefData] = useState<any>({
     cleanliness_level: 'Medium',
@@ -318,7 +291,7 @@ export default function EditProfileScreen() {
     sleep_schedule: 'Flexible',
     budget_min: '',
     budget_max: '',
-    preferred_gender: 'any',
+    preferred_gender: 'any', // Will be overwritten on save
     other_interests: '' ,
     city: ''
   });
@@ -332,64 +305,64 @@ export default function EditProfileScreen() {
   const [passwordData, setPasswordData] = useState({ old: '', new: '', confirm: '' });
 
   // Fetch Data
-  // Inside your React Component
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
 
-      const [profileData, preferencesData] = await Promise.all([
-        dataAPI.getProfile(),
-        dataAPI.getPreferences()
-      ]);
+        const [profileData, preferencesData] = await Promise.all([
+          dataAPI.getProfile(),
+          dataAPI.getPreferences()
+        ]);
 
-      // ✅ GENERAL = PROFILE DATA
-      setGeneralData({
-        full_name: profileData.full_name || '',
-        email: profileData.email || '',
-        phone_number: profileData.phone_number || '',
-        gender: profileData.gender || ''
-      });
-
-      // ✅ PREFERENCES = PREFERENCES DATA (unchanged)
-      if (preferencesData) {
-        setPrefData({
-          cleanliness_level: preferencesData.cleanliness_level || 'Medium',
-          smoking: !!preferencesData.smoking,
-          pets: !!preferencesData.pets,
-          guests_allowed: !!preferencesData.guests_allowed,
-          noise_tolerance: preferencesData.noise_tolerance || 'Medium',
-          sleep_schedule: preferencesData.sleep_schedule || 'Flexible',
-          budget_min: preferencesData.budget_min
-            ? String(preferencesData.budget_min)
-            : '',
-          budget_max: preferencesData.budget_max
-            ? String(preferencesData.budget_max)
-            : '',
-          preferred_gender: preferencesData.preferred_gender || 'any',
-          city: preferencesData.city || ''
+        // ✅ GENERAL = PROFILE DATA
+        setGeneralData({
+          full_name: profileData.full_name || '',
+          email: profileData.email || '',
+          phone_number: profileData.phone_number || '',
+          gender: profileData.gender || ''
         });
 
-        setPrefId(preferencesData.preference_id);
+        // ✅ PREFERENCES = PREFERENCES DATA
+        if (preferencesData) {
+          setPrefData({
+            cleanliness_level: preferencesData.cleanliness_level || 'Medium',
+            smoking: !!preferencesData.smoking,
+            pets: !!preferencesData.pets,
+            guests_allowed: !!preferencesData.guests_allowed,
+            noise_tolerance: preferencesData.noise_tolerance || 'Medium',
+            sleep_schedule: preferencesData.sleep_schedule || 'Flexible',
+            budget_min: preferencesData.budget_min
+              ? String(preferencesData.budget_min)
+              : '',
+            budget_max: preferencesData.budget_max
+              ? String(preferencesData.budget_max)
+              : '',
+            preferred_gender: preferencesData.preferred_gender || 'any',
+            city: preferencesData.city || ''
+          });
 
-        setCustomTags(
-          preferencesData.other_interests
-            ? preferencesData.other_interests
-                .split(',')
-                .map((t: string) => t.trim())
-                .filter(Boolean)
-            : []
-        );
+          setPrefId(preferencesData.preference_id);
+
+          setCustomTags(
+            preferencesData.other_interests
+              ? preferencesData.other_interests
+                  .split(',')
+                  .map((t: string) => t.trim())
+                  .filter(Boolean)
+              : []
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load data', err);
+        // Optional: showInfo("Could not load previous data."); 
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to load data', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  loadData();
-}, []);
+    loadData();
+  }, []);
 
 
   // Tag Handlers
@@ -415,26 +388,25 @@ useEffect(() => {
       if (activeTab === 'general') {
         const updatedUser = await dataAPI.updateProfile(user.user_id, generalData);
         login({ ...user, ...updatedUser }); 
-        Alert.alert("Success", "Profile updated successfully");
+        showSuccess("Profile Updated", "Your changes have been saved."); // ✅ Toast
       } 
       else if (activeTab === 'preferences') {
         
-        // FIX 2: Helper to safely parse budget numbers (Prevents NaN)
         const parseAmount = (value: any) => {
-            if (!value) return null; // Handle empty string, null, undefined
-            // Remove commas in case user typed "10,000"
+            if (!value) return null; 
             const num = parseFloat(String(value).replace(/,/g, ''));
             return isNaN(num) ? null : num;
         };
 
         // Prepare Payload
+        // 🛑 LOGIC: Auto-set preferred_gender to the user's gender
         const payload = {
             ...prefData,
             budget_min: parseAmount(prefData.budget_min),
             budget_max: parseAmount(prefData.budget_max),
             other_interests: customTags.join(','),
-            city: prefData.city || null
-
+            city: prefData.city || null,
+            preferred_gender: user.gender || generalData.gender // Auto-force same gender
         };
 
         console.log('Saving preferences payload:', payload);
@@ -443,7 +415,6 @@ useEffect(() => {
         
         setPrefData({
             ...updatedPref,
-            // Convert back to string for input display
             budget_min: updatedPref.budget_min !== null ? String(updatedPref.budget_min) : '',
             budget_max: updatedPref.budget_max !== null ? String(updatedPref.budget_max) : '',
         });
@@ -452,18 +423,17 @@ useEffect(() => {
             setPrefId(updatedPref.preference_id);
         }
 
-        Alert.alert("Success", "Preferences saved!");
+        showSuccess("Preferences Saved!", "We'll use these to find better matches."); // ✅ Toast
       }
       else if (activeTab === 'security') {
         if (passwordData.new !== passwordData.confirm) throw new Error("Passwords do not match");
         await authAPI.changePassword(passwordData.old, passwordData.new);
-        Alert.alert("Success", "Password changed. Please login again.", [
-            { text: "OK", onPress: () => router.replace('/(auth)/login') }
-        ]);
+        
+        showSuccess("Password Changed", "Please log in again."); // ✅ Toast
+        router.replace('/(auth)/login');
       }
     } catch (error: any) {
         let msg = error.message;
-        // Clean up messy API errors
         if (msg.includes('Save failed:')) {
             try {
                 const rawJson = msg.replace('Save failed: ', '');
@@ -473,7 +443,7 @@ useEffect(() => {
             } catch (e) {}
         }
         console.error('Save error:', error);
-        Alert.alert("Save Failed", msg);
+        showError(msg); // ✅ Toast for Error
     } finally {
       setLoading(false);
     }
