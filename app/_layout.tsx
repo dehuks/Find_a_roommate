@@ -62,16 +62,40 @@ export default function RootLayout() {
     } else if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated, segments, appIsReady]);
+  }, [isAuthenticated, segments, isMounted]);
 
-  const onLayoutRootView = useCallback(async () => {
-    if (appIsReady) {
-      await SplashScreen.hideAsync();
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
+
+  async function registerForPushNotificationsAsync() {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    // If we don't have permission, ask for it
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
     }
-  }, [appIsReady]);
 
-  if (!appIsReady) {
-    return null;
+    if (finalStatus !== 'granted') {
+      return;
+    }
+
+    // Get the token
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log("📲 Expo Push Token:", token);
+
+    // Send to Backend
+    await dataAPI.updatePushToken(token);
+  }
+
+  if (!isMounted) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#258cf4" />
+      </View>
+    );
   }
 
   return (
@@ -133,38 +157,4 @@ export default function RootLayout() {
       <Toast />
     </View>
   );
-}
-
-// --- Helper: Push Notifications ---
-async function registerForPushNotificationsAsync() {
-  try {
-    // Double check to ensure we don't run this on Simulator
-    if (!Device.isDevice) return;
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      console.log('❌ Push notification permissions not granted');
-      return;
-    }
-
-    // This line often hangs on Simulators if not guarded
-    const tokenData = await Notifications.getExpoPushTokenAsync();
-    const token = tokenData.data;
-    
-    console.log('📲 Expo Push Token:', token);
-
-    if (token) {
-       // Only send to backend if we have a token
-       await dataAPI.updatePushToken(token);
-    }
-  } catch (error) {
-    console.log('⚠️ Error registering for push notifications:', error);
-  }
 }
