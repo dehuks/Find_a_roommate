@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router'; // 👈 Added useFocusEffect for auto-refresh
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router'; // 👈 Added useFocusEffect for auto-refresh
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { dataAPI, SERVER_URL } from '../../services/api'; // 👈 Import SERVER_URL
 
 export default function ListingsScreen() {
@@ -57,7 +57,7 @@ export default function ListingsScreen() {
 
     // Filter by Type
     if (selectedFilter) {
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         item.room_type?.toLowerCase() === selectedFilter.toLowerCase()
       );
     }
@@ -99,18 +99,19 @@ export default function ListingsScreen() {
         {/* Floating Add Button */}
         <TouchableOpacity
           onPress={() => router.push('/listings/add')} // Ensure you create this file!
-          className="absolute bottom-6 right-6 bg-blue-600 w-14 h-14 rounded-full justify-center items-center shadow-lg shadow-blue-300 z-50"
+          className="absolute bottom-6 right-6 bg-blue-600 w-14 h-14 rounded-full justify-center items-center z-50"
+          style={{ shadowColor: '#93c5fd', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 15, elevation: 5 }}
         >
           <Ionicons name="add" size={32} color="white" />
         </TouchableOpacity>
-        
+
         {/* Search Bar */}
         <View className="flex-row gap-3 mb-4">
           <View className="flex-1 flex-row items-center bg-slate-50 border border-slate-200 rounded-xl h-12 px-4">
             <Ionicons name="search" size={20} color="#94a3b8" />
-            <TextInput 
-              className="flex-1 ml-2 text-slate-900" 
-              placeholder="Search by location or title..." 
+            <TextInput
+              className="flex-1 ml-2 text-slate-900"
+              placeholder="Search by location or title..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#94a3b8"
@@ -127,18 +128,16 @@ export default function ListingsScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-2">
             {filters.map((filter) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={filter.label}
                 onPress={() => setSelectedFilter(filter.value)}
-                className={`px-4 py-2 rounded-full border ${
-                  selectedFilter === filter.value 
-                    ? 'bg-blue-600 border-blue-600' 
+                className={`px-4 py-2 rounded-full border ${selectedFilter === filter.value
+                    ? 'bg-blue-600 border-blue-600'
                     : 'bg-white border-slate-200'
-                }`}
+                  }`}
               >
-                <Text className={`text-sm font-medium ${
-                  selectedFilter === filter.value ? 'text-white' : 'text-slate-600'
-                }`}>
+                <Text className={`text-sm font-medium ${selectedFilter === filter.value ? 'text-white' : 'text-slate-600'
+                  }`}>
                   {filter.label}
                 </Text>
               </TouchableOpacity>
@@ -157,14 +156,14 @@ export default function ListingsScreen() {
           <Ionicons name="home-outline" size={64} color="#cbd5e1" />
           <Text className="text-lg font-bold text-slate-900 mt-4">No rooms found</Text>
           <Text className="text-slate-500 text-center mt-2">
-            {searchQuery || selectedFilter 
-              ? 'Try adjusting your filters or search' 
+            {searchQuery || selectedFilter
+              ? 'Try adjusting your filters or search'
               : 'Check back later for new listings'}
           </Text>
         </View>
       ) : (
-        <ScrollView 
-          className="flex-1" 
+        <ScrollView
+          className="flex-1"
           contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -173,22 +172,23 @@ export default function ListingsScreen() {
           {filteredListings.map((item, index) => {
             // 👇 FIX: Use SERVER_URL instead of hardcoded IP
             const imageUrl = item.images?.[0]?.image_file;
-            const fullImageUrl = imageUrl?.startsWith('http') 
-              ? imageUrl 
+            const fullImageUrl = imageUrl?.startsWith('http')
+              ? imageUrl
               : `${SERVER_URL}${imageUrl || ''}`;
 
             return (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={item.listing_id || index}
-                className="bg-white rounded-2xl overflow-hidden mb-5 shadow-sm border border-slate-100"
+                className="bg-white rounded-2xl overflow-hidden mb-5 border border-slate-100"
+                style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 }}
                 onPress={() => router.push(`/listings/${item.listing_id}`)}
                 activeOpacity={0.7}
               >
                 {/* Image Section */}
                 <View className="relative">
-                  <Image 
-                    source={{ uri: fullImageUrl }} 
-                    className="w-full h-48 bg-slate-200" 
+                  <Image
+                    source={{ uri: fullImageUrl }}
+                    className="w-full h-48 bg-slate-200"
                     resizeMode="cover"
                   />
                   <View className="absolute top-3 left-3 bg-white/95 px-3 py-1.5 rounded-full">
@@ -202,7 +202,7 @@ export default function ListingsScreen() {
                     </View>
                   )}
                 </View>
-                
+
                 {/* Info Section */}
                 <View className="p-4">
                   <View className="flex-row justify-between items-start mb-2">

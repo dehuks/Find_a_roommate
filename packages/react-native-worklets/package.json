@@ -1,0 +1,6 @@
+{
+    "name": "react-native-worklets",
+    "version": "0.0.1",
+    "description": "Stub package — satisfies nativewind/babel's peer dependency on react-native-worklets without requiring reanimated v4",
+    "main": "index.js"
+}

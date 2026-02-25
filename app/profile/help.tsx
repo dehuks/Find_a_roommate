@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
-import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { LayoutAnimation, Platform, ScrollView, Text, TouchableOpacity, UIManager, View } from 'react-native';
 
 // Enable animation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+    UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const FAQS = [
@@ -41,15 +40,15 @@ const FAQItem = ({ item }: any) => {
 
     return (
         <View className="bg-white mb-3 rounded-2xl border border-slate-100 overflow-hidden">
-            <TouchableOpacity 
+            <TouchableOpacity
                 onPress={toggleExpand}
                 className="p-4 flex-row justify-between items-center bg-slate-50"
             >
                 <Text className="font-semibold text-slate-800 flex-1 mr-4">{item.question}</Text>
-                <Ionicons 
-                    name={expanded ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color="#64748b" 
+                <Ionicons
+                    name={expanded ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#64748b"
                 />
             </TouchableOpacity>
             {expanded && (
@@ -64,8 +63,6 @@ const FAQItem = ({ item }: any) => {
 export default function HelpCenterScreen() {
     return (
         <View className="flex-1 bg-white">
-            <Stack.Screen options={{ title: 'Help Center', headerShadowVisible: false }} />
-            
             <ScrollView contentContainerStyle={{ padding: 24 }}>
                 <View className="items-center mb-8">
                     <View className="w-16 h-16 bg-blue-100 rounded-full justify-center items-center mb-4">
@@ -84,7 +81,7 @@ export default function HelpCenterScreen() {
                 <View className="mt-8 p-6 bg-slate-50 rounded-2xl items-center">
                     <Text className="font-bold text-slate-900 mb-2">Still need help?</Text>
                     <Text className="text-slate-500 text-center mb-4">
-                        If you couldn't find your answer, reach out to our support team.
+                        If you couldn&apos;t find your answer, reach out to our support team.
                     </Text>
                     <TouchableOpacity className="bg-blue-600 py-3 px-6 rounded-xl">
                         <Text className="text-white font-bold">Contact Support</Text>

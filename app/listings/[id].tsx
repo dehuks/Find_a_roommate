@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Share } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { dataAPI, chatAPI, SERVER_URL } from '../../services/api';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, Image, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { chatAPI, dataAPI, SERVER_URL } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
 const { width } = Dimensions.get('window');
@@ -11,7 +11,7 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuthStore();
-  
+
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [contacting, setContacting] = useState(false);
@@ -27,7 +27,7 @@ export default function ListingDetailScreen() {
       // In production, you'd add a getListingById(id) API endpoint.
       const allListings = await dataAPI.getListings();
       const found = allListings.find((l: any) => String(l.listing_id) === String(id));
-      
+
       if (!found) {
         Alert.alert("Error", "Room not found");
         router.back();
@@ -109,11 +109,11 @@ export default function ListingDetailScreen() {
   }
 
   // Handle Images safely
-  const images = listing.images && listing.images.length > 0 
+  const images = listing.images && listing.images.length > 0
     ? listing.images.map((img: any) => {
-        const url = img.image_file;
-        return url.startsWith('http') ? url : `${SERVER_URL}${url}`;
-      })
+      const url = img.image_file;
+      return url.startsWith('http') ? url : `${SERVER_URL}${url}`;
+    })
     : ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800'];
 
   const ownerName = listing.owner_name || 'Host';
@@ -125,16 +125,18 @@ export default function ListingDetailScreen() {
 
       {/* --- HEADER --- */}
       <View className="absolute top-12 left-0 right-0 z-10 flex-row justify-between px-4">
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          className="w-10 h-10 bg-white/95 rounded-full items-center justify-center shadow-lg"
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="w-10 h-10 bg-white/95 rounded-full items-center justify-center"
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}
         >
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           onPress={handleShare}
-          className="w-10 h-10 bg-white/95 rounded-full items-center justify-center shadow-lg"
+          className="w-10 h-10 bg-white/95 rounded-full items-center justify-center"
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}
         >
           <Ionicons name="share-outline" size={22} color="black" />
         </TouchableOpacity>
@@ -143,9 +145,9 @@ export default function ListingDetailScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         {/* --- IMAGE CAROUSEL --- */}
         <View className="relative">
-          <ScrollView 
-            horizontal 
-            pagingEnabled 
+          <ScrollView
+            horizontal
+            pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={(e) => {
               const index = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -154,15 +156,15 @@ export default function ListingDetailScreen() {
             scrollEventThrottle={16}
           >
             {images.map((imgUrl: string, index: number) => (
-              <Image 
+              <Image
                 key={index}
-                source={{ uri: imgUrl }} 
+                source={{ uri: imgUrl }}
                 style={{ width, height: 320 }}
                 resizeMode="cover"
               />
             ))}
           </ScrollView>
-          
+
           {/* Counter Badge */}
           {images.length > 1 && (
             <View className="absolute bottom-4 right-4 bg-black/70 px-3 py-1.5 rounded-full">
@@ -190,9 +192,9 @@ export default function ListingDetailScreen() {
                 </View>
               )}
             </View>
-            
+
             <Text className="text-3xl font-bold text-slate-900 mb-2">{listing.title}</Text>
-            
+
             <View className="flex-row items-center">
               <Ionicons name="location" size={18} color="#64748b" />
               <Text className="text-slate-600 ml-1 text-base">
@@ -226,9 +228,9 @@ export default function ListingDetailScreen() {
           {/* Host Info */}
           <View className="mb-6">
             <Text className="font-bold text-lg text-slate-900 mb-3">Hosted by</Text>
-            <TouchableOpacity 
-                onPress={() => router.push({pathname: '/user/[id]', params: {id: listing.owner}})}
-                className="flex-row items-center bg-slate-50 rounded-xl p-4"
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/user/[id]', params: { id: listing.owner } })}
+              className="flex-row items-center bg-slate-50 rounded-xl p-4"
             >
               <View className="w-14 h-14 bg-blue-600 rounded-full items-center justify-center mr-3">
                 <Text className="text-xl font-bold text-white">{ownerInitial}</Text>
@@ -269,7 +271,10 @@ export default function ListingDetailScreen() {
       </ScrollView>
 
       {/* --- BOTTOM ACTION BAR --- */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-2xl">
+      <View
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200"
+        style={{ shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 24 }}
+      >
         <View className="px-6 py-4 flex-row items-center justify-between">
           <View className="flex-1 mr-4">
             <Text className="text-slate-500 text-xs mb-1">Total Rent</Text>
@@ -278,11 +283,12 @@ export default function ListingDetailScreen() {
             </Text>
             <Text className="text-xs text-slate-400">per month</Text>
           </View>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             onPress={handleContact}
             disabled={contacting}
-            className="bg-blue-600 px-6 py-4 rounded-2xl shadow-lg flex-row items-center"
+            className="bg-blue-600 px-6 py-4 rounded-2xl flex-row items-center"
+            style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}
             activeOpacity={0.8}
           >
             {contacting ? (
