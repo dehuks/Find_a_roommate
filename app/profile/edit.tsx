@@ -128,19 +128,36 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
       </View>
     </View>
 
-    {/* City */}
+    {/* Target City */}
     <View>
-      <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">City</Text>
+      <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">Target City / Area</Text>
       <TextInput
-        value={prefData.city || ''}
-        onChangeText={(t) => setPrefData({ ...prefData, city: t })}
-        placeholder="e.g. Nairobi, Mombasa"
+        value={prefData.target_city || prefData.city || ''}
+        onChangeText={(t) => setPrefData({ ...prefData, target_city: t })}
+        placeholder="e.g. Westlands, Nairobi"
+        className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900"
+      />
+    </View>
+
+    {/* Move-in Date */}
+    <View>
+      <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">Target Move-in Date</Text>
+      <TextInput
+        value={prefData.move_in_date || ''}
+        onChangeText={(t) => setPrefData({ ...prefData, move_in_date: t })}
+        placeholder="e.g. 2026-03-01 or Immediately"
         className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900"
       />
     </View>
 
     {/* Lifestyle Preferences */}
     <View className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+      <PreferenceToggle
+        label="Actively looking for a room/roommate?"
+        value={prefData.is_actively_looking}
+        onValueChange={(v: boolean) => setPrefData({ ...prefData, is_actively_looking: v })}
+      />
+      <View className="h-[1px] bg-slate-200 my-3" />
       <PreferenceToggle
         label="Do you smoke?"
         value={prefData.smoking}
@@ -279,6 +296,7 @@ export default function EditProfileScreen() {
   });
 
   const [prefData, setPrefData] = useState<any>({
+    is_actively_looking: true,
     cleanliness_level: 'Medium',
     smoking: false,
     pets: false,
@@ -322,6 +340,7 @@ export default function EditProfileScreen() {
         // ✅ PREFERENCES = PREFERENCES DATA
         if (preferencesData) {
           setPrefData({
+            is_actively_looking: preferencesData.is_actively_looking ?? true,
             cleanliness_level: preferencesData.cleanliness_level || 'Medium',
             smoking: !!preferencesData.smoking,
             pets: !!preferencesData.pets,

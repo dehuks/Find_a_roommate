@@ -1,9 +1,9 @@
 import { useAuthStore } from '../store/authStore';
 
 // 🛑 UPDATE THIS EVERY TIME YOU RESTART NGROK
-const NGROK_ID = 'pneumococcal-ternately-deedra.ngrok-free.dev'; 
+const NGROK_ID = 'pneumococcal-ternately-deedra.ngrok-free.dev';
 export const BASE_URL = `https://${NGROK_ID}/api`;
-export const SERVER_URL = `https://${NGROK_ID}`; 
+export const SERVER_URL = `https://${NGROK_ID}`;
 
 const getHeaders = (token?: string) => {
   const headers: any = {
@@ -25,24 +25,24 @@ export const authAPI = {
       });
 
       if (!response.ok) throw new Error('Invalid email or password');
-      
+
       const tokens = await response.json();
 
       const profileResponse = await fetch(`${BASE_URL}/users/me/`, {
-          headers: getHeaders(tokens.access),
+        headers: getHeaders(tokens.access),
       });
 
       if (!profileResponse.ok) {
-          return { 
-              user_id: 0, 
-              email: email, 
-              full_name: "User", 
-              role: "seeker", 
-              is_verified: false,
-              token: tokens.access 
-          };
+        return {
+          user_id: 0,
+          email: email,
+          full_name: "User",
+          role: "seeker",
+          is_verified: false,
+          token: tokens.access
+        };
       }
-      
+
       const userData = await profileResponse.json();
       return { ...userData, token: tokens.access };
 
@@ -56,19 +56,19 @@ export const authAPI = {
     const response = await fetch(`${BASE_URL}/register/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        full_name: fullName, 
-        email, 
-        password: pass, 
-        phone_number: phone, 
-        role: role, 
+      body: JSON.stringify({
+        full_name: fullName,
+        email,
+        password: pass,
+        phone_number: phone,
+        role: role,
         gender: gender
       }),
     });
 
     if (!response.ok) {
-        const err = await response.json();
-        throw new Error(JSON.stringify(err));
+      const err = await response.json();
+      throw new Error(JSON.stringify(err));
     }
     return await response.json();
   },
@@ -78,9 +78,9 @@ export const authAPI = {
     const response = await fetch(`${BASE_URL}/users/set_password/`, {
       method: 'POST',
       headers: getHeaders(token),
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         current_password: oldPassword,
-        new_password: newPassword 
+        new_password: newPassword
       }),
     });
 
@@ -92,19 +92,19 @@ export const authAPI = {
 export const dataAPI = {
   getListings: async () => {
     const token = useAuthStore.getState().user?.token;
-    
+
     try {
       const response = await fetch(`${BASE_URL}/listings/`, {
         headers: getHeaders(token),
       });
-      
+
       if (!response.ok) return [];
-      
+
       const data = await response.json();
-      
+
       return data.map((item: any) => {
-        const firstImage = item.images && item.images.length > 0 
-          ? item.images[0].image_file 
+        const firstImage = item.images && item.images.length > 0
+          ? item.images[0].image_file
           : null;
 
         const displayImage = firstImage
@@ -112,12 +112,12 @@ export const dataAPI = {
           : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267';
 
         return {
-          ...item, 
+          ...item,
           id: item.listing_id,
           price: item.rent_amount,
           location: item.city,
           type: item.room_type,
-          image: displayImage, 
+          image: displayImage,
         };
       });
     } catch (e) {
@@ -128,14 +128,14 @@ export const dataAPI = {
 
   getMatches: async () => {
     const token = useAuthStore.getState().user?.token;
-    
+
     try {
       const response = await fetch(`${BASE_URL}/matches/`, { headers: getHeaders(token) });
-      
+
       if (!response.ok) return [];
-      
+
       const data = await response.json();
-      
+
       // Safety check for array
       if (!Array.isArray(data)) return [];
 
@@ -153,10 +153,74 @@ export const dataAPI = {
     }
   },
 
+  getUsers: async () => {
+    const token = useAuthStore.getState().user?.token;
+
+    try {
+      const response = await fetch(`${BASE_URL}/users/`, {
+        headers: getHeaders(token),
+      });
+
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.error("Fetch Users Error:", e);
+      return [];
+    }
+  },
+
+  getRoommates: async (params?: Record<string, string>) => {
+    const token = useAuthStore.getState().user?.token;
+
+    try {
+      // BYPASS: The Django roommates endpoint has a 500 error due to `id` filter.
+      // We will fetch from the guaranteed-working `/users/` endpoint and filter locally!
+      let url = `${BASE_URL}/users/`;
+      /* Note: We will handle search logic on the frontend to avoid complex query string bugs */
+
+      const response = await fetch(url, {
+        headers: getHeaders(token),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Fetch Roommates Error Response:", response.status, errorText);
+        return [];
+      }
+
+      const data = await response.json();
+      console.log("RAW ROOMMATES API DATA:", JSON.stringify(data).slice(0, 300));
+
+      // Handle Django Pagination
+      let payload = data;
+      if (data && Array.isArray(data.results)) {
+        payload = data.results;
+      }
+
+      const allUsers = Array.isArray(payload) ? payload : [];
+      const meId = useAuthStore.getState().user?.user_id;
+
+      // FRONTEND FILTERING REPLACING DJANGO LOGIC
+      const validRoommates = allUsers.filter(u => {
+        if (u.user_id === meId) return false; // Exclude myself
+        if (u.role === 'admin' || u.is_staff) return false; // Exclude staff
+        if (!u.preferences?.is_actively_looking) return false; // *MUST* be looking
+        return true;
+      });
+
+      return validRoommates;
+    } catch (e) {
+      console.error("Fetch Roommates Exception:", e);
+      return [];
+    }
+  },
+
   getUser: async (id: string | string[]) => {
     const token = useAuthStore.getState().user?.token;
     const userId = Array.isArray(id) ? id[0] : id;
-    
+
     const response = await fetch(`${BASE_URL}/users/${userId}/`, {
       headers: getHeaders(token),
     });
@@ -178,7 +242,7 @@ export const dataAPI = {
       const response = await fetch(`${BASE_URL}/preferences/`, { headers: getHeaders(token) });
       if (!response.ok) return null;
       const data = await response.json();
-      return Array.isArray(data) ? data[0] : data; 
+      return Array.isArray(data) ? data[0] : data;
     } catch (e) {
       return null;
     }
@@ -217,14 +281,14 @@ export const dataAPI = {
 
     const response = await fetch(`${BASE_URL}/verifications/`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }, 
+      headers: { 'Authorization': `Bearer ${token}` },
       body: formData,
     });
 
     if (!response.ok) {
-        const text = await response.text();
-        console.error("Verification Error:", text.slice(0, 200));
-        throw new Error(`Server Error: ${response.status}`);
+      const text = await response.text();
+      console.error("Verification Error:", text.slice(0, 200));
+      throw new Error(`Server Error: ${response.status}`);
     }
     return await response.json();
   },
@@ -242,11 +306,11 @@ export const dataAPI = {
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Create Listing Error:", errorText);
-        throw new Error("Failed to post listing. Please check your inputs.");
+      const errorText = await response.text();
+      console.error("Create Listing Error:", errorText);
+      throw new Error("Failed to post listing. Please check your inputs.");
     }
-    
+
     return await response.json();
   },
 
@@ -269,7 +333,7 @@ export const dataAPI = {
     });
 
     if (!response.ok) {
-        throw new Error("Failed to delete listing");
+      throw new Error("Failed to delete listing");
     }
     return true;
   },
@@ -303,9 +367,9 @@ export const dataAPI = {
     });
 
     if (!response.ok) {
-        // Handle "Already exists" error gracefully
-        if (response.status === 400) throw new Error("Request already sent!");
-        throw new Error("Failed to send request");
+      // Handle "Already exists" error gracefully
+      if (response.status === 400) throw new Error("Request already sent!");
+      throw new Error("Failed to send request");
     }
     return await response.json();
   },
