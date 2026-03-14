@@ -1,23 +1,23 @@
-import React, { useState, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  TouchableOpacity,
   Alert,
+  Image,
   RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { dataAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { dataAPI } from '../../services/api'; 
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, fetchUser } = useAuthStore();
-  
+
   // State
   const [refreshing, setRefreshing] = useState(false);
   const [listingCount, setListingCount] = useState(0); // 👈 Track number of listings
@@ -27,12 +27,12 @@ export default function ProfileScreen() {
     useCallback(() => {
       const loadData = async () => {
         if (!user) return;
-        
+
         try {
           // 1. Fetch My Listings Count
           const myListings = await dataAPI.getMyListings();
           setListingCount(myListings.length);
-          
+
           // 2. Refresh User Profile (in case verification status changed)
           // We don't await this if we want the UI to load fast, but good to have
           // await fetchUser?.(); 
@@ -40,7 +40,7 @@ export default function ProfileScreen() {
           console.error("Error loading profile stats:", error);
         }
       };
-      
+
       loadData();
     }, [user])
   );
@@ -67,8 +67,9 @@ export default function ProfileScreen() {
           You are not logged in.
         </Text>
         <TouchableOpacity
+          className="bg-blue-600 px-8 py-3 rounded-full"
+          style={{ shadowColor: '#bfdbfe', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 6, elevation: 3 }}
           onPress={() => router.replace('/(auth)/login')}
-          className="bg-blue-600 px-8 py-3 rounded-full shadow-lg shadow-blue-200"
         >
           <Text className="text-white font-bold text-lg">Go to Login</Text>
         </TouchableOpacity>
@@ -104,7 +105,10 @@ export default function ProfileScreen() {
         }
       >
         {/* --- Header Section --- */}
-        <View className="bg-white pb-8 pt-4 items-center border-b border-slate-100 rounded-b-[40px] shadow-sm">
+        <View
+          className="bg-white pb-8 pt-4 items-center border-b border-slate-100 rounded-b-[40px]"
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 }}
+        >
           <View className="relative">
             <Image
               source={{
@@ -136,9 +140,9 @@ export default function ProfileScreen() {
           {/* --- Stats Row --- */}
           <View className="flex-row mt-6 gap-4">
             {/* 👇 CLICKABLE LISTINGS BOX */}
-            <TouchableOpacity 
-                onPress={() => router.push('/profile/listings')}
-                className="items-center bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100 active:bg-slate-100"
+            <TouchableOpacity
+              onPress={() => router.push('/profile/listings')}
+              className="items-center bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100 active:bg-slate-100"
             >
               <Text className="text-xl font-bold text-slate-900">{listingCount}</Text>
               <Text className="text-xs text-slate-500 uppercase tracking-wide">
@@ -166,7 +170,7 @@ export default function ProfileScreen() {
               router.push({ pathname: '/profile/edit', params: { tab: 'general' } })
             }
           >
-            <MenuOption icon="person-outline" label="Edit Profile" />
+            <SettingsOption icon="person-outline" label="Edit Profile" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -177,16 +181,15 @@ export default function ProfileScreen() {
               })
             }
           >
-            <MenuOption icon="options-outline" label="Preferences" />
+            <SettingsOption icon="options-outline" label="Preferences" />
           </TouchableOpacity>
 
           {!user.is_verified && (
             <TouchableOpacity onPress={() => router.push('/profile/verify')}>
-              <MenuOption
+              <SettingsOption
                 icon="id-card-outline"
                 label="Get Verified"
-                textColor="text-blue-600"
-                iconColor="#2563eb"
+                color="#2563eb"
               />
             </TouchableOpacity>
           )}
@@ -199,7 +202,7 @@ export default function ProfileScreen() {
               })
             }
           >
-            <MenuOption
+            <SettingsOption
               icon="shield-checkmark-outline"
               label="Privacy & Security"
             />
@@ -210,7 +213,7 @@ export default function ProfileScreen() {
           </Text>
 
           <TouchableOpacity onPress={() => router.push('/profile/help')}>
-            <MenuOption icon="help-circle-outline" label="Help Center" />
+            <SettingsOption icon="help-circle-outline" label="Help Center" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -239,28 +242,24 @@ export default function ProfileScreen() {
 }
 
 // --- Menu Option Component ---
-const MenuOption = ({
-  icon,
-  label,
-  textColor,
-  iconColor,
-}: {
-  icon: any;
-  label: string;
-  textColor?: string;
-  iconColor?: string;
-}) => (
-  <View className="flex-row items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-3">
-    <View className="w-10 h-10 bg-slate-50 rounded-full justify-center items-center">
-      <Ionicons name={icon} size={20} color={iconColor || '#334155'} />
-    </View>
-    <Text
-      className={`flex-1 ml-4 font-semibold text-base ${
-        textColor || 'text-slate-700'
-      }`}
+const SettingsOption = ({ icon, color, label, target, type = 'link', value }: any) => {
+  const router = useRouter();
+
+  return (
+    <View
+      className="flex-row items-center bg-white p-4 rounded-2xl border border-slate-100 mb-3"
+      style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 }}
     >
-      {label}
-    </Text>
-    <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-  </View>
-);
+      <View className="w-10 h-10 bg-slate-50 rounded-full justify-center items-center">
+        <Ionicons name={icon} size={20} color={color || '#334155'} />
+      </View>
+      <Text
+        className={`flex-1 ml-4 font-semibold text-base ${color ? `text-[${color}]` : 'text-slate-700'
+          }`}
+      >
+        {label}
+      </Text>
+      <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+    </View>
+  );
+};
