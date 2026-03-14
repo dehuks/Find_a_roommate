@@ -55,7 +55,7 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === '(auth)';
 
     // Once app is ready, hide splash screen
-    SplashScreen.hideAsync();
+    SplashScreen.hideAsync().catch(() => {});
 
     if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)');

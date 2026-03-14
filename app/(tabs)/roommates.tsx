@@ -97,7 +97,13 @@ export default function RoommatesScreen() {
                             >
                                 <View className="flex-row items-center">
                                     <Image
-                                        source={{ uri: person.profile_image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400' }}
+                                        source={{
+                                            uri: person.profile_image || (
+                                                person.gender?.toLowerCase() === 'female'
+                                                    ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400'
+                                                    : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400'
+                                            )
+                                        }}
                                         className="w-16 h-16 rounded-full bg-slate-100"
                                     />
                                     <View className="flex-1 ml-4 justify-center">

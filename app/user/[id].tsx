@@ -128,11 +128,27 @@ export default function UserDetailScreen() {
         {/* Profile Image */}
         <View className="items-center mt-20 px-6">
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=800' }}
+            source={{
+              uri: user.profile_image || (
+                user.gender?.toLowerCase() === 'female'
+                  ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800'
+                  : 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=800'
+              )
+            }}
             className="w-32 h-32 rounded-full border-4 border-slate-100 mb-4"
           />
           <Text className="text-3xl font-bold text-slate-900 text-center">{user.full_name}</Text>
-          <Text className="text-slate-500 text-base mb-6">{user.role || 'Seeker'} • {user.preferences?.city || 'Nairobi'}</Text>
+          <View className="flex-row items-center gap-2 mb-1">
+            <Text className="text-slate-500 text-base">{user.role || 'Seeker'} • {user.preferences?.city || 'Nairobi'}</Text>
+            {user.gender && (
+              <View className={`px-2.5 py-0.5 rounded-full ${user.gender?.toLowerCase() === 'female' ? 'bg-pink-50' : 'bg-blue-50'}`}>
+                <Text className={`text-xs font-bold capitalize ${user.gender?.toLowerCase() === 'female' ? 'text-pink-600' : 'text-blue-600'}`}>
+                  {user.gender}
+                </Text>
+              </View>
+            )}
+          </View>
+          <View className="mb-5" />
 
           {/* 👇 THE NEW SCORE CARD */}
           {myPrefs ? (
@@ -202,15 +218,83 @@ export default function UserDetailScreen() {
         <View className="px-6">
           <Text className="text-lg font-bold text-slate-900 mb-4">Lifestyle & Preferences</Text>
           <View className="flex-row flex-wrap gap-3">
+
+            {/* Location */}
+            {(user.preferences?.target_city || user.preferences?.city) && (
+              <DetailTag icon="location" label={user.preferences?.target_city || user.preferences?.city} />
+            )}
+
+            {/* Move-in Date */}
+            {user.preferences?.move_in_date && (
+              <DetailTag icon="calendar" label={`Move in: ${user.preferences.move_in_date}`} />
+            )}
+
+            {/* Budget */}
+            {(user.preferences?.budget_min || user.preferences?.budget_max) && (
+              <DetailTag
+                icon="cash"
+                label={
+                  user.preferences?.budget_min && user.preferences?.budget_max
+                    ? `KES ${Number(user.preferences.budget_min).toLocaleString()} – ${Number(user.preferences.budget_max).toLocaleString()}`
+                    : user.preferences?.budget_max
+                    ? `Max KES ${Number(user.preferences.budget_max).toLocaleString()}`
+                    : `Min KES ${Number(user.preferences.budget_min).toLocaleString()}`
+                }
+                color="text-emerald-700 bg-emerald-50"
+              />
+            )}
+
+            {/* Actively Looking */}
+            <DetailTag
+              icon={user.preferences?.is_actively_looking ? "search" : "pause-circle"}
+              label={user.preferences?.is_actively_looking ? "Actively Looking" : "Not Looking"}
+              color={user.preferences?.is_actively_looking ? "text-blue-600 bg-blue-50" : "text-slate-500 bg-slate-100"}
+            />
+
+            {/* Sleep Schedule */}
             <DetailTag icon="bed" label={user.preferences?.sleep_schedule || 'Flexible'} />
+
+            {/* Cleanliness */}
             <DetailTag icon="water" label={`${user.preferences?.cleanliness_level || 'Medium'} Clean`} />
-            <DetailTag icon="logo-usd" label={`Budget: ${user.preferences?.budget_max || 'N/A'}`} />
+
+            {/* Noise Tolerance */}
+            <DetailTag icon="volume-medium" label={`${user.preferences?.noise_tolerance || 'Medium'} Noise`} />
+
+            {/* Smoking */}
             <DetailTag
               icon={user.preferences?.smoking ? "skull" : "leaf"}
               label={user.preferences?.smoking ? "Smoker" : "Non-Smoker"}
               color={user.preferences?.smoking ? "text-red-600 bg-red-50" : "text-green-600 bg-green-50"}
             />
+
+            {/* Pets */}
+            <DetailTag
+              icon="paw"
+              label={user.preferences?.pets ? "Has Pets" : "No Pets"}
+              color={user.preferences?.pets ? "text-amber-700 bg-amber-50" : "text-slate-500 bg-slate-100"}
+            />
+
+            {/* Guests */}
+            <DetailTag
+              icon={user.preferences?.guests_allowed ? "people" : "person-remove"}
+              label={user.preferences?.guests_allowed ? "Guests OK" : "No Guests"}
+              color={user.preferences?.guests_allowed ? "text-violet-600 bg-violet-50" : "text-slate-500 bg-slate-100"}
+            />
           </View>
+
+          {/* Interest Tags */}
+          {user.preferences?.other_interests && (
+            <View className="mt-6">
+              <Text className="text-sm font-bold text-slate-500 uppercase mb-3">Interests & Requirements</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {user.preferences.other_interests.split(',').filter(Boolean).map((tag: string, i: number) => (
+                  <View key={i} className="bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
+                    <Text className="text-blue-700 text-xs font-semibold">{tag.trim()}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
