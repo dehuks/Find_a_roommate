@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { chatAPI } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
@@ -24,16 +25,14 @@ export default function MessagesScreen() {
     }
   };
 
-  // Initial Load
-  useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  // Reload when screen comes into focus (so you see new messages after going back)
-  useEffect(() => {
-    const interval = setInterval(fetchConversations, 5000); // Optional: Auto-refresh inbox every 5s
-    return () => clearInterval(interval);
-  }, []);
+  // Poll only while screen is focused; clears interval when navigating away
+  useFocusEffect(
+    useCallback(() => {
+      fetchConversations();
+      const interval = setInterval(fetchConversations, 5000);
+      return () => clearInterval(interval);
+    }, [])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
