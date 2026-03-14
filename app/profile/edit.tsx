@@ -23,8 +23,8 @@ const PreferenceToggle = ({ label, value, onValueChange }: any) => (
 );
 
 const RenderGeneral = ({ data, setData }: any) => (
-  <View className="space-y-4">
-    <View>
+  <View>
+    <View className="mb-5">
       <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">Full Name</Text>
       <TextInput
         value={data.full_name}
@@ -33,7 +33,7 @@ const RenderGeneral = ({ data, setData }: any) => (
       />
     </View>
 
-    <View>
+    <View className="mb-5">
       <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">Email</Text>
       <TextInput
         value={data.email}
@@ -44,7 +44,7 @@ const RenderGeneral = ({ data, setData }: any) => (
       />
     </View>
 
-    <View>
+    <View className="mb-5">
       <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">Phone</Text>
       <TextInput
         value={data.phone_number}
@@ -77,21 +77,24 @@ const RenderGeneral = ({ data, setData }: any) => (
 );
 
 const RenderSecurity = ({ data, setData }: any) => (
-  <View className="space-y-4">
+  <View>
     <TextInput
       placeholder="Current Password"
+      placeholderTextColor="#94a3b8"
       secureTextEntry
-      className="bg-slate-50 border border-slate-200 p-4 rounded-2xl"
+      className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-4"
       onChangeText={(t) => setData({ ...data, old: t })}
     />
     <TextInput
       placeholder="New Password"
+      placeholderTextColor="#94a3b8"
       secureTextEntry
-      className="bg-slate-50 border border-slate-200 p-4 rounded-2xl"
+      className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-4"
       onChangeText={(t) => setData({ ...data, new: t })}
     />
     <TextInput
       placeholder="Confirm New Password"
+      placeholderTextColor="#94a3b8"
       secureTextEntry
       className="bg-slate-50 border border-slate-200 p-4 rounded-2xl"
       onChangeText={(t) => setData({ ...data, confirm: t })}
@@ -100,9 +103,9 @@ const RenderSecurity = ({ data, setData }: any) => (
 );
 
 const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTag, addTag, removeTag }: any) => (
-  <View className="space-y-6">
+  <View>
     {/* Budget Range */}
-    <View>
+    <View className="mb-6">
       <Text className="text-slate-500 mb-3 ml-1 text-xs uppercase font-bold">Budget Range (KES/Month)</Text>
       <View className="flex-row gap-3">
         <View className="flex-1">
@@ -111,6 +114,7 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
             value={prefData.budget_min ? String(prefData.budget_min) : ''}
             onChangeText={(t) => setPrefData({ ...prefData, budget_min: t })}
             placeholder="e.g. 10000"
+            placeholderTextColor="#94a3b8"
             keyboardType="numeric"
             className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900 font-bold"
           />
@@ -121,6 +125,7 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
             value={prefData.budget_max ? String(prefData.budget_max) : ''}
             onChangeText={(t) => setPrefData({ ...prefData, budget_max: t })}
             placeholder="e.g. 30000"
+            placeholderTextColor="#94a3b8"
             keyboardType="numeric"
             className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900 font-bold"
           />
@@ -129,29 +134,31 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
     </View>
 
     {/* Target City */}
-    <View>
+    <View className="mb-6">
       <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">Target City / Area</Text>
       <TextInput
         value={prefData.target_city || prefData.city || ''}
         onChangeText={(t) => setPrefData({ ...prefData, target_city: t })}
         placeholder="e.g. Westlands, Nairobi"
+        placeholderTextColor="#94a3b8"
         className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900"
       />
     </View>
 
     {/* Move-in Date */}
-    <View>
+    <View className="mb-6">
       <Text className="text-slate-500 mb-1 ml-1 text-xs uppercase font-bold">Target Move-in Date</Text>
       <TextInput
         value={prefData.move_in_date || ''}
         onChangeText={(t) => setPrefData({ ...prefData, move_in_date: t })}
         placeholder="e.g. 2026-03-01 or Immediately"
+        placeholderTextColor="#94a3b8"
         className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-slate-900"
       />
     </View>
 
     {/* Lifestyle Preferences */}
-    <View className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+    <View className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
       <PreferenceToggle
         label="Actively looking for a room/roommate?"
         value={prefData.is_actively_looking}
@@ -178,7 +185,7 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
     </View>
 
     {/* Cleanliness */}
-    <View>
+    <View className="mb-6">
       <Text className="text-slate-500 mb-3 ml-1 text-xs uppercase font-bold">Cleanliness Level</Text>
       <View className="flex-row gap-3">
         {['Low', 'Medium', 'High'].map((level) => (
@@ -199,7 +206,7 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
     </View>
 
     {/* Noise Tolerance */}
-    <View>
+    <View className="mb-6">
       <Text className="text-slate-500 mb-3 ml-1 text-xs uppercase font-bold">Noise Tolerance</Text>
       <View className="flex-row gap-3">
         {['Low', 'Medium', 'High'].map((level) => (
@@ -220,7 +227,7 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
     </View>
 
     {/* Sleep Schedule */}
-    <View>
+    <View className="mb-6">
       <Text className="text-slate-500 mb-3 ml-1 text-xs uppercase font-bold">Sleep Schedule</Text>
       <View className="flex-row gap-3">
         {['Early bird', 'Night owl', 'Flexible'].map((schedule) => (
@@ -252,6 +259,7 @@ const RenderPreferences = ({ prefData, setPrefData, customTags, newTag, setNewTa
           value={newTag}
           onChangeText={setNewTag}
           placeholder="Add e.g. Gym enthusiast, Vegan"
+          placeholderTextColor="#94a3b8"
           className="flex-1 bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl"
           onSubmitEditing={addTag}
         />
@@ -354,7 +362,9 @@ export default function EditProfileScreen() {
               ? String(preferencesData.budget_max)
               : '',
             preferred_gender: preferencesData.preferred_gender || 'any',
-            city: preferencesData.city || ''
+            city: preferencesData.city || '',
+            target_city: preferencesData.target_city || '',
+            move_in_date: preferencesData.move_in_date || ''
           });
 
           setPrefId(preferencesData.preference_id);
