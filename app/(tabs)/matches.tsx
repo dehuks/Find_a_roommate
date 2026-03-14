@@ -21,18 +21,30 @@ export default function MatchesScreen() {
       const allData = await dataAPI.getMatches();
       const currentUserId = user?.user_id;
 
+      const myGender = user?.gender?.toLowerCase() ?? '';
+
+      // Gender compatibility: block female-male pairings
+      const genderAllowed = (genderA: string | undefined, genderB: string | undefined) => {
+        const a = genderA?.toLowerCase() ?? '';
+        const b = genderB?.toLowerCase() ?? '';
+        if (a === 'female' || b === 'female') return a === b;
+        return true;
+      };
+
       // Filter 1: Pending Requests (Safe Check)
       const pending = allData.filter((m: any) =>
         m.match_status === 'pending' &&
-        m.matched_user && // 👈 CHECK IF IT EXISTS FIRST
-        m.matched_user.user_id === currentUserId
+        m.matched_user &&
+        m.matched_user.user_id === currentUserId &&
+        genderAllowed(myGender, m.user?.gender)
       );
 
       // Filter 2: Accepted Matches (Safe Check)
       const accepted = allData.filter((m: any) =>
         m.match_status === 'accepted' &&
-        m.user &&         // 👈 Check existence
-        m.matched_user    // 👈 Check existence
+        m.user &&
+        m.matched_user &&
+        genderAllowed(m.user?.gender, m.matched_user?.gender)
       );
 
       setRequests(pending);
@@ -97,11 +109,26 @@ export default function MatchesScreen() {
     >
       <View className="flex-row items-center mb-3">
         <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400' }}
+          source={{
+            uri: item.user.profile_image || (
+              item.user.gender?.toLowerCase() === 'female'
+                ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400'
+                : 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400'
+            )
+          }}
           className="w-12 h-12 rounded-full bg-slate-200"
         />
         <View className="ml-3 flex-1">
-          <Text className="font-bold text-slate-900 text-base">{item.user.full_name}</Text>
+          <View className="flex-row items-center gap-2">
+            <Text className="font-bold text-slate-900 text-base">{item.user.full_name}</Text>
+            {item.user.gender && (
+              <View className={`px-2 py-0.5 rounded-full ${item.user.gender?.toLowerCase() === 'female' ? 'bg-pink-50' : 'bg-blue-50'}`}>
+                <Text className={`text-[10px] font-bold capitalize ${item.user.gender?.toLowerCase() === 'female' ? 'text-pink-600' : 'text-blue-600'}`}>
+                  {item.user.gender}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text className="text-slate-500 text-xs">Wants to connect with you</Text>
         </View>
         <View className="bg-blue-50 px-2 py-1 rounded">
@@ -140,11 +167,26 @@ export default function MatchesScreen() {
         style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 }}
       >
         <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400' }}
+          source={{
+            uri: otherPerson.profile_image || (
+              otherPerson.gender?.toLowerCase() === 'female'
+                ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400'
+                : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400'
+            )
+          }}
           className="w-14 h-14 rounded-full bg-slate-200"
         />
         <View className="flex-1 ml-4">
-          <Text className="text-lg font-bold text-slate-900">{otherPerson.full_name}</Text>
+          <View className="flex-row items-center gap-2">
+            <Text className="text-lg font-bold text-slate-900">{otherPerson.full_name}</Text>
+            {otherPerson.gender && (
+              <View className={`px-2 py-0.5 rounded-full ${otherPerson.gender?.toLowerCase() === 'female' ? 'bg-pink-50' : 'bg-blue-50'}`}>
+                <Text className={`text-[10px] font-bold capitalize ${otherPerson.gender?.toLowerCase() === 'female' ? 'text-pink-600' : 'text-blue-600'}`}>
+                  {otherPerson.gender}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text className="text-slate-500 text-xs">
             {isMeSender ? "You sent request" : "They sent request"} • {otherPerson.preferences?.city || 'Nairobi'}
           </Text>
